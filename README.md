@@ -5,6 +5,10 @@ Deep set Vue.js objects
 
 Binding deeply nested data properties and vuex data to a form or component can be tricky. The following set of tools aims to simplify data bindings. Compatible with `Vue 1.x`, `Vue 2.x`, `Vuex 1.x`, and `Vuex 2.x`
 
+### Examples
+
+Full examples can be found in the [tests](https://github.com/bhoriuchi/vue-deepset/tree/master/test) folder on the project repo
+
 ### Requirements
 
 * `lodash@^4.0.0`
@@ -146,4 +150,61 @@ Equivalent to `vueModel`
 
 Equivalent to `vuexModel`
 
-### Example
+### Non-Plugin usage
+
+##### Example - Browser
+
+```js
+var store = new Vuex.Store({
+  state: {
+    formData: {
+      message: 'Hello Vuex!'
+    }
+  },
+  mutations: VueDeepSet.extendMutation()
+})
+
+var app = new Vue({
+  el: '#app',
+  store,
+  computed: {
+    vuexForm () {
+      return this.vuexModel('formData')
+    },
+    localForm () {
+      return this.vueModel(this.localForm)
+    }
+  },
+  methods: {
+    vueSet: VueDeepSet.vueSet,
+    vuexSet: VueDeepSet.vuexSet,
+    vueModel: VueDeepSet.vueModel,
+    vuexModel: VueDeepSet.vuexModel
+  },
+  data: {
+    localForm: {
+      message: 'Hello Vue!'
+    }
+  }
+})
+```
+
+### Example - Webpack + ES6
+
+```js
+import { vueSet } from 'vue-deepset'
+
+export default {
+  methods: {
+    vueSet: VueDeepSet.vueSet,
+    clearForm () {
+      this.vueSet(this.localForm, 'message', 'Modified')
+    }
+  },
+  data: {
+    localForm: {
+      message: 'Hello Vue!'
+    }
+  }
+}
+```
