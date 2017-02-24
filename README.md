@@ -31,6 +31,9 @@ Model objects returned by `$deepModel`, `vueModel`, and `vuexModel` are flat and
 
 ## Usage
 
+* Webpack `import * as VueDeepSet from 'vue-deepset'`
+* Browser `<script src='./node_modules/vue-deepset/vue-deepset.js'></script>`
+
 ### As a Plugin
 
 The easiest way to set up `vue-deepset` is as a Vue.js plugin. The plugin adds instance methods `$deepModel`, `$vueSet`, and `$vuexSet`. For **vuex** a mutation must be added (see vuex section).
