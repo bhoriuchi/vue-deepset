@@ -35,6 +35,8 @@ Model objects returned by `$deepModel`, `vueModel`, and `vuexModel` are flat and
 
 The easiest way to set up `vue-deepset` is as a Vue.js plugin. The plugin adds instance methods `$deepModel`, `$vueSet`, and `$vuexSet`. For **vuex** a mutation must be added (see vuex section).
 
+When using ES6+ use `import * as VueDeepSet from 'vue-deepset'`
+
 * `$deepModel ( obj:Object )` - for local vue objects
 * `$deepModel ( path:String )` - for vuex state properties; path to base object
 * `$vueSet (obj:Object, path:String, value:*)`

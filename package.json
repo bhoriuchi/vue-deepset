@@ -2,7 +2,7 @@
   "name": "vue-deepset",
   "version": "0.1.0",
   "description": "Deep set Vue.js objects",
-  "main": "vue-deepset.js",
+  "main": "index.js",
   "scripts": {
     "build:copybrc": "cp build/.build.babelrc src/.babelrc",
     "build:rmbrc": "rm -f src/.babelrc",
