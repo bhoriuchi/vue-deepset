@@ -27,15 +27,29 @@ function getPaths (obj, current = '', paths = []) {
   if (isHash(obj)) {
     _.forEach(obj, (val, key) => {
       let k = key.match(INVALID_KEY_RX) ? `["${key}"]` : `.${key}`
-      let cur = `${current}${k}`.replace(/^./, '')
+      let cur = `${current}${k}`.replace(/^\./, '')
       paths.push(cur)
-      if (isHash(val)) getPaths(obj, cur, paths)
+      if (isHash(val)) getPaths(val, cur, paths)
     })
   }
   return _.uniq(paths)
 }
 
-export const VUEX_DEEP_SET = 'VUEX_DEEP_SET'
+/**
+ * converts a path string to one usable by deepModel
+ * @param path
+ * @returns {*}
+ */
+export function sanitizePath (path) {
+  if (!_.isString(path)) throw new Error('VueDeepSet: invalid path, must be string')
+
+  return _.reduce(_.toPath(path), (pathString, part) => {
+    let partStr = part.match(INVALID_KEY_RX)
+      ? `["${part}"]`
+      : `${pathString === '' ? '' : '.'}${part}`
+    return pathString + partStr
+  }, '')
+}
 
 /**
  * deep sets a Vue.js object creating reactive properties if they do not exist
@@ -55,11 +69,22 @@ export function vueSet (obj, path, value) {
 }
 
 /**
+ * deep sets a vuex object creating reactive properties if they do not exist
+ * @param path
+ * @param value
+ */
+export function vuexSet (path, value) {
+  let store = _.get(this, '$store')
+  if (!store) throw new Error('VueDeepSet: could not find vuex store object on instance')
+  store[store.commit ? 'commit' : 'dispatch']('VUEX_DEEP_SET', { path, value })
+}
+
+/**
  * vuex mutation to set an objects value at a specific path
  * @param state
  * @param args
  */
-export function mutation (state, args) {
+export function VUEX_DEEP_SET (state, args) {
   vueSet(state, args.path, args.value)
 }
 
@@ -69,9 +94,7 @@ export function mutation (state, args) {
  * @returns {*}
  */
 export function extendMutation (mutations = {}) {
-  return Object.assign(mutations, {
-    [VUEX_DEEP_SET]: mutation
-  })
+  return Object.assign(mutations, { VUEX_DEEP_SET })
 }
 
 /**
@@ -80,21 +103,20 @@ export function extendMutation (mutations = {}) {
  * @returns {{}}
  */
 export function vuexModel (vuexPath) {
+  if (!_.isString(vuexPath)) throw new Error('VueDeepSet: invalid vuex path string')
   let model = {}
   let obj = _.get(this.$store.state, vuexPath)
   _.forEach(getPaths(obj), path => {
     let connector = path.match(/^\[/) ? '' : '.'
+    let propPath = `${vuexPath}${connector}${path}`
     Object.defineProperty(model, path, {
       configurable: true,
       enumerable: true,
       get: () => {
-        return _.get(this.$store.state, `${vuexPath}${connector}${path}`)
+        return _.get(this.$store.state, propPath)
       },
       set: (value) => {
-        this.$store[this.$store.commit ? 'commit' : 'dispatch'](VUEX_DEEP_SET, {
-          path: `${vuexPath}${connector}${path}`,
-          value
-        })
+        vuexSet.call(this, propPath, value)
       }
     })
   })
@@ -107,6 +129,7 @@ export function vuexModel (vuexPath) {
  * @returns {Array}
  */
 export function vueModel (obj) {
+  if (!_.isObject(obj)) throw new Error('VueDeepSet: invalid object')
   let model = {}
   _.forEach(getPaths(obj), path => {
     Object.defineProperty(model, path, {
@@ -116,9 +139,30 @@ export function vueModel (obj) {
         return _.get(obj, path)
       },
       set: (value) => {
-        vueSet(obj, path, value)
+        vueSet.call(this, obj, path, value)
       }
     })
   })
   return model
+}
+
+/**
+ * creates a vuex model if the arg is a string, vue model otherwise
+ * @param arg
+ * @returns {{}}
+ */
+export function deepModel (arg) {
+  return _.isString(arg)
+    ? vuexModel.call(this, arg)
+    : vueModel.call(this, arg)
+}
+
+/**
+ * plugin
+ * @param Vue
+ */
+export function install (Vue) {
+  Vue.prototype.$deepModel = deepModel
+  Vue.prototype.$vueSet = vueSet
+  Vue.prototype.$vuexSet = vuexSet
 }

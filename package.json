@@ -2,12 +2,25 @@
   "name": "vue-deepset",
   "version": "0.1.0",
   "description": "Deep set Vue.js objects",
-  "main": "index.js",
+  "main": "vue-deepset.js",
   "scripts": {
     "build:copybrc": "cp build/.build.babelrc src/.babelrc",
     "build:rmbrc": "rm -f src/.babelrc",
-    "build": "cp build/.build.babelrc src/.babelrc && rollup -c build/rollup.config.js && rm -f src/.babelrc",
+    "build:browser": "browserify index.js -s VueDeepSet > vue-deepset.js",
+    "build:node": "rollup -c build/rollup.config.js",
+    "build": "npm run build:copybrc && npm run build:node && npm run build:browser && npm run build:rmbrc",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "browserify": {
+    "transform": [
+      "rollupify",
+      "browserify-global-shim"
+    ],
+    "standalone": "VueDeepSet"
+  },
+  "browserify-global-shim": {
+    "lodash/lodash.min": "_",
+    "vue": "Vue"
   },
   "repository": {
     "type": "git",
@@ -40,7 +53,11 @@
     "babel-preset-stage-2": "^6.22.0",
     "babel-register": "^6.23.0",
     "babel-runtime": "^6.23.0",
+    "babelify": "^7.3.0",
+    "browserify": "^14.1.0",
+    "browserify-global-shim": "^1.0.3",
     "rollup": "^0.41.4",
-    "rollup-plugin-babel": "^2.7.1"
+    "rollup-plugin-babel": "^2.7.1",
+    "rollupify": "^0.3.9"
   }
 }
