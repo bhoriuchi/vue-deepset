@@ -34,7 +34,15 @@
     "set",
     "vuex",
     "model",
-    "v-model"
+    "v-model",
+    "binding",
+    "dynamic",
+    "nested",
+    "paths",
+    "path",
+    "store",
+    "form",
+    "mutation"
   ],
   "author": "Branden Horiuchi <bhoriuchi@gmail.com>",
   "license": "MIT",
