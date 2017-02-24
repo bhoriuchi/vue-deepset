@@ -1,0 +1,16 @@
+build
+assets
+example
+scratch
+node_modules
+src
+src-v0
+test
+dist
+.babelrc
+.DS_Store
+.idea
+npm-debug.log
+.npmignore
+.travis.yml
+.*
