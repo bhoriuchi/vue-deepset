@@ -23,8 +23,12 @@ function isHash (obj) {
  * @returns {string}
  */
 function pathJoin (base, path) {
-  let connector = path.match(/^\[/) ? '' : '.'
-  return `${base ? base : ''}${base ? connector : ''}${path}`
+  try {
+    let connector = path.match(/^\[/) ? '' : '.'
+    return `${base ? base : ''}${base ? connector : ''}${path}`
+  } catch (error) {
+    return ''
+  }
 }
 
 /**

@@ -35,8 +35,12 @@ function isHash(obj) {
  * @returns {string}
  */
 function pathJoin(base, path) {
-  var connector = path.match(/^\[/) ? '' : '.';
-  return '' + (base ? base : '') + (base ? connector : '') + path;
+  try {
+    var connector = path.match(/^\[/) ? '' : '.';
+    return '' + (base ? base : '') + (base ? connector : '') + path;
+  } catch (error) {
+    return '';
+  }
 }
 
 /**
