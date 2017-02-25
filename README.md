@@ -5,6 +5,8 @@ Deep set Vue.js objects
 
 Binding deeply nested data properties and vuex data to a form or component can be tricky. The following set of tools aims to simplify data bindings. Compatible with `Vue 1.x`, `Vue 2.x`, `Vuex 1.x`, and `Vuex 2.x`
 
+**Note** `vueModel` and `vuexModel` use [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) objects if supported by the browser and fallback to an object with generated fields based on the target object. Because of this, it is always best to pre-define the properties of an object.
+
 ### Examples
 
 Full examples can be found in the [tests](https://github.com/bhoriuchi/vue-deepset/tree/master/test) folder on the project repo

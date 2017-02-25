@@ -7,6 +7,12 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 var _ = _interopDefault(require('lodash/lodash.min'));
 var Vue = _interopDefault(require('vue'));
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+  return typeof obj;
+} : function (obj) {
+  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
+
 /*
  * @author Branden Horiuchi <bhoriuchi@gmail.com>
  * @description Deep set Vue.js objects
@@ -20,6 +26,17 @@ var INVALID_KEY_RX = /^\d|[^a-zA-Z0-9_]/gm;
  */
 function isHash(obj) {
   return _.isObject(obj) && !_.isArray(obj) && !_.isDate(obj) && !_.isEmpty(obj);
+}
+
+/**
+ * joins 2 paths
+ * @param base
+ * @param path
+ * @returns {string}
+ */
+function pathJoin(base, path) {
+  var connector = path.match(/^\[/) ? '' : '.';
+  return '' + (base ? base : '') + (base ? connector : '') + path;
 }
 
 /**
@@ -66,7 +83,6 @@ function sanitizePath(path) {
  */
 function vueSet(obj, path, value) {
   var fields = _.isArray(path) ? path : _.toPath(path);
-
   for (var i = 0; i < fields.length; i++) {
     var prop = fields[i];
     if (i === fields.length - 1) Vue.set(obj, prop, value);else if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {});
@@ -114,23 +130,37 @@ function vuexModel(vuexPath) {
   var _this = this;
 
   if (!_.isString(vuexPath)) throw new Error('VueDeepSet: invalid vuex path string');
-  var model = {};
-  var obj = _.get(this.$store.state, vuexPath);
-  _.forEach(getPaths(obj), function (path) {
-    var connector = path.match(/^\[/) ? '' : '.';
-    var propPath = '' + vuexPath + connector + path;
-    Object.defineProperty(model, path, {
-      configurable: true,
-      enumerable: true,
-      get: function get() {
-        return _.get(_this.$store.state, propPath);
+
+  if ((typeof Proxy === 'undefined' ? 'undefined' : _typeof(Proxy)) === undefined) {
+    var model = {};
+    var obj = _.get(this.$store.state, vuexPath);
+    _.forEach(getPaths(obj), function (path) {
+      var propPath = pathJoin(vuexPath, path);
+      Object.defineProperty(model, path, {
+        configurable: true,
+        enumerable: true,
+        get: function get$$1() {
+          return _.get(_this.$store.state, propPath);
+        },
+        set: function set$$1(value) {
+          vuexSet.call(_this, propPath, value);
+        }
+      });
+    });
+    return model;
+  } else {
+    return new Proxy(_.get(this.$store.state, vuexPath, this.$store.state), {
+      get: function get$$1(target, property) {
+        return _.get(_this.$store.state, pathJoin(vuexPath, property));
       },
-      set: function set(value) {
-        vuexSet.call(_this, propPath, value);
+      set: function set$$1(target, property, value) {
+        vuexSet.call(_this, pathJoin(vuexPath, property), value);
+      },
+      has: function has(target, property) {
+        return true;
       }
     });
-  });
-  return model;
+  }
 }
 
 /**
@@ -142,20 +172,35 @@ function vueModel(obj) {
   var _this2 = this;
 
   if (!_.isObject(obj)) throw new Error('VueDeepSet: invalid object');
-  var model = {};
-  _.forEach(getPaths(obj), function (path) {
-    Object.defineProperty(model, path, {
-      configurable: true,
-      enumerable: true,
-      get: function get() {
-        return _.get(obj, path);
+
+  if (typeof Proxy === 'undefined') {
+    var model = {};
+    _.forEach(getPaths(obj), function (path) {
+      Object.defineProperty(model, path, {
+        configurable: true,
+        enumerable: true,
+        get: function get$$1() {
+          return _.get(obj, path);
+        },
+        set: function set$$1(value) {
+          vueSet.call(_this2, obj, path, value);
+        }
+      });
+    });
+    return model;
+  } else {
+    return new Proxy(obj, {
+      get: function get$$1(target, property) {
+        return _.get(target, property);
       },
-      set: function set(value) {
-        vueSet.call(_this2, obj, path, value);
+      set: function set$$1(target, property, value) {
+        vueSet.call(_this2, target, property, value);
+      },
+      has: function has(target, property) {
+        return true;
       }
     });
-  });
-  return model;
+  }
 }
 
 /**

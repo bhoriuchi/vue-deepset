@@ -17,6 +17,17 @@ function isHash (obj) {
 }
 
 /**
+ * joins 2 paths
+ * @param base
+ * @param path
+ * @returns {string}
+ */
+function pathJoin (base, path) {
+  let connector = path.match(/^\[/) ? '' : '.'
+  return `${base ? base : ''}${base ? connector : ''}${path}`
+}
+
+/**
  * generates an array of paths to use when creating an abstracted object
  * @param obj
  * @param current
@@ -59,7 +70,6 @@ export function sanitizePath (path) {
  */
 export function vueSet (obj, path, value) {
   let fields = _.isArray(path) ? path : _.toPath(path)
-
   for (let i = 0; i < fields.length; i++) {
     let prop = fields[i]
     if (i === fields.length - 1) Vue.set(obj, prop, value)
@@ -104,23 +114,37 @@ export function extendMutation (mutations = {}) {
  */
 export function vuexModel (vuexPath) {
   if (!_.isString(vuexPath)) throw new Error('VueDeepSet: invalid vuex path string')
-  let model = {}
-  let obj = _.get(this.$store.state, vuexPath)
-  _.forEach(getPaths(obj), path => {
-    let connector = path.match(/^\[/) ? '' : '.'
-    let propPath = `${vuexPath}${connector}${path}`
-    Object.defineProperty(model, path, {
-      configurable: true,
-      enumerable: true,
-      get: () => {
-        return _.get(this.$store.state, propPath)
+
+  if (typeof Proxy === undefined) {
+    let model = {}
+    let obj = _.get(this.$store.state, vuexPath)
+    _.forEach(getPaths(obj), path => {
+      let propPath = pathJoin(vuexPath, path)
+      Object.defineProperty(model, path, {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          return _.get(this.$store.state, propPath)
+        },
+        set: (value) => {
+          vuexSet.call(this, propPath, value)
+        }
+      })
+    })
+    return model
+  } else {
+    return new Proxy(_.get(this.$store.state, vuexPath, this.$store.state), {
+      get: (target, property) => {
+        return _.get(this.$store.state, pathJoin(vuexPath, property))
       },
-      set: (value) => {
-        vuexSet.call(this, propPath, value)
+      set: (target, property, value) => {
+        vuexSet.call(this, pathJoin(vuexPath, property), value)
+      },
+      has: (target, property) => {
+        return true
       }
     })
-  })
-  return model
+  }
 }
 
 /**
@@ -130,20 +154,35 @@ export function vuexModel (vuexPath) {
  */
 export function vueModel (obj) {
   if (!_.isObject(obj)) throw new Error('VueDeepSet: invalid object')
-  let model = {}
-  _.forEach(getPaths(obj), path => {
-    Object.defineProperty(model, path, {
-      configurable: true,
-      enumerable: true,
-      get: () => {
-        return _.get(obj, path)
+
+  if (typeof Proxy === 'undefined') {
+    let model = {}
+    _.forEach(getPaths(obj), path => {
+      Object.defineProperty(model, path, {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          return _.get(obj, path)
+        },
+        set: (value) => {
+          vueSet.call(this, obj, path, value)
+        }
+      })
+    })
+    return model
+  } else {
+    return new Proxy(obj, {
+      get: (target, property) => {
+        return _.get(target, property)
       },
-      set: (value) => {
-        vueSet.call(this, obj, path, value)
+      set: (target, property, value) => {
+        vueSet.call(this, target, property, value)
+      },
+      has: (target, property) => {
+        return true
       }
     })
-  })
-  return model
+  }
 }
 
 /**
