@@ -159,6 +159,7 @@ function vuexModel(vuexPath) {
       },
       set: function set$$1(target, property, value) {
         vuexSet.call(_this, pathJoin(vuexPath, property), value);
+        return true;
       },
       has: function has(target, property) {
         return true;
@@ -199,6 +200,7 @@ function vueModel(obj) {
       },
       set: function set$$1(target, property, value) {
         vueSet.call(_this2, target, property, value);
+        return true;
       },
       has: function has(target, property) {
         return true;

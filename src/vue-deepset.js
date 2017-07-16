@@ -143,6 +143,7 @@ export function vuexModel (vuexPath) {
       },
       set: (target, property, value) => {
         vuexSet.call(this, pathJoin(vuexPath, property), value)
+        return true
       },
       has: (target, property) => {
         return true
@@ -181,6 +182,7 @@ export function vueModel (obj) {
       },
       set: (target, property, value) => {
         vueSet.call(this, target, property, value)
+        return true
       },
       has: (target, property) => {
         return true
