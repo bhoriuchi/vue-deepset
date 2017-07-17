@@ -2,7 +2,7 @@
  * @author Branden Horiuchi <bhoriuchi@gmail.com>
  * @description Deep set Vue.js objects
  */
-import _ from 'lodash/lodash.min'
+import _ from './liteutils/dash'
 import Vue from 'vue'
 
 const INVALID_KEY_RX = /^\d|[^a-zA-Z0-9_]/gm

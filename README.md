@@ -13,7 +13,6 @@ Full examples can be found in the [tests](https://github.com/bhoriuchi/vue-deeps
 
 ### Requirements
 
-* `lodash@^4.0.0`
 * `vue@>=1.0.0`
 * `vuex@>=1.0.0` (optional)
 
