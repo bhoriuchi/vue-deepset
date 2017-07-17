@@ -202,9 +202,9 @@ import { vueSet } from 'vue-deepset'
 
 export default {
   methods: {
-    vueSet: VueDeepSet.vueSet,
+    vueSet: vueSet,
     clearForm () {
-      this.vueSet(this.localForm, 'message', 'Modified')
+      this.vueSet(this.localForm, 'message', '')
     }
   },
   data: {
