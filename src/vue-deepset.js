@@ -74,12 +74,11 @@ export function sanitizePath (path) {
  */
 export function vueSet (obj, path, value) {
   let fields = _.isArray(path) ? path : _.toPath(path)
-  for (let i = 0; i < fields.length; i++) {
-    let prop = fields[i]
-    if (i === fields.length - 1) Vue.set(obj, prop, value)
-    else if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {})
-    obj = obj[prop]
-  }
+  let prop = fields.shift()
+
+  if (!fields.length) return Vue.nextTick(() => Vue.set(obj, prop, value))
+  if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {})
+  Vue.nextTick(() => vueSet(obj[prop], fields, value))
 }
 
 /**

@@ -36,6 +36,10 @@
         <label>Vuex State: formData.message</label>
         <input class="form-control" type="text" v-model="vuexModel.message">
       </div>
+      <div class="form-group">
+        <label>Vuex State: formData['foos[0].bar']</label>
+        <input class="form-control" type="text" v-model="vuexModel['foos[0].bar']">
+      </div>
     </div>
   </div>
   <div class="row">
@@ -54,7 +58,11 @@
   var store = new Vuex.Store({
     state: {
       formData: {
-        message: 'Hello Vuex!'
+        message: 'Hello Vuex!',
+        foos: [
+          { bar: 1 },
+          { bar: 2 }
+        ]
       }
     },
     mutations: VueDeepSet.extendMutation()

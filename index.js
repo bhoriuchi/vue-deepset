@@ -259,7 +259,7 @@ toPath._accepts = [String];
 /* eslint-disable */
 function has(obj, path) {
   var found = true;
-  var fields = isArray(path) ? path : toPath(path);
+  var fields = isNumber(path) ? [path] : isArray(path) ? path : toPath(path);
   if (!fields.length) return false;
   forEach(fields, function (field) {
     if (obj[field] === undefined) {
@@ -385,11 +385,15 @@ function sanitizePath(path) {
  */
 function vueSet(obj, path, value) {
   var fields = _.isArray(path) ? path : _.toPath(path);
-  for (var i = 0; i < fields.length; i++) {
-    var prop = fields[i];
-    if (i === fields.length - 1) Vue.set(obj, prop, value);else if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {});
-    obj = obj[prop];
-  }
+  var prop = fields.shift();
+
+  if (!fields.length) return Vue.nextTick(function () {
+    return Vue.set(obj, prop, value);
+  });
+  if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {});
+  Vue.nextTick(function () {
+    return vueSet(obj[prop], fields, value);
+  });
 }
 
 /**
