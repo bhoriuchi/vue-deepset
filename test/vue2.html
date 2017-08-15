@@ -4,8 +4,14 @@
   <meta charset="UTF-8">
   <title>Title</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.1.10/vue.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/2.1.2/vuex.js"></script>
+
+  <!--
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/2.3.1/vuex.js"></script>
+  -->
   <script src="../vue-deepset.js"></script>
 </head>
 <body>
@@ -38,7 +44,11 @@
       </div>
       <div class="form-group">
         <label>Vuex State: formData['foos[0].bar']</label>
-        <input class="form-control" type="text" v-model="vuexModel['foos[0].bar']">
+        <input class="form-control" type="text" v-model.number="vuexModel['foos[0].bar']">
+      </div>
+      <div class="form-group">
+        <label>Vuex State: formData.newVal</label>
+        <input class="form-control" type="text" v-model="vuexModel['newVal.obj']">
       </div>
     </div>
   </div>
@@ -76,7 +86,7 @@
         return this.$deepModel(this.obj)
       },
       vuexModel () {
-        return this.$deepModel('formData')
+        return this.$deepModel('formData', { useProxy: true })
       }
     },
     data: {

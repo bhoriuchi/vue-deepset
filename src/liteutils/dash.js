@@ -5,6 +5,8 @@ import isString from './dash.isString'
 import reduce from './dash.reduce'
 import toPath from './dash.toPath'
 import isArray from './dash.isArray'
+import isDate from './dash.isDate'
+import isEmpty from './dash.isEmpty'
 import has from './dash.has'
 import isNumber from './dash.isNumber'
 import get from './dash.get'
@@ -20,6 +22,8 @@ export { isString }
 export { reduce }
 export { toPath }
 export { isArray }
+export { isDate }
+export { isEmpty }
 export { has }
 export { isNumber }
 export { get }
@@ -36,6 +40,8 @@ export default {
   reduce,
   toPath,
   isArray,
+  isDate,
+  isEmpty,
   has,
   isNumber,
   get,

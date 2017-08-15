@@ -44,7 +44,13 @@ function getPaths (obj, current = '', paths = []) {
       let k = key.match(INVALID_KEY_RX) ? `["${key}"]` : `.${key}`
       let cur = `${current}${k}`.replace(/^\./, '')
       paths.push(cur)
-      if (isHash(val)) getPaths(val, cur, paths)
+      if (isHash(val) || _.isArray(val)) getPaths(val, cur, paths)
+    })
+  } else if (_.isArray(obj)) {
+    _.forEach(obj, (val, idx) => {
+      let cur = `${current}[${idx}]`
+      paths.push(cur)
+      if (isHash(val) || _.isArray(val)) getPaths(val, cur, paths)
     })
   }
   return _.uniq(paths)
@@ -76,9 +82,9 @@ export function vueSet (obj, path, value) {
   let fields = _.isArray(path) ? path : _.toPath(path)
   let prop = fields.shift()
 
-  if (!fields.length) return Vue.nextTick(() => Vue.set(obj, prop, value))
+  if (!fields.length) return Vue.set(obj, prop, value)
   if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {})
-  Vue.nextTick(() => vueSet(obj[prop], fields, value))
+  vueSet(obj[prop], fields, value)
 }
 
 /**
@@ -111,33 +117,52 @@ export function extendMutation (mutations = {}) {
 }
 
 /**
+ * builds a new model object based on the values
+ * @param vuexPath
+ * @param options
+ * @returns {Object}
+ */
+function buildVuexModel (vuexPath, options) {
+  let model = {}
+  let obj = _.get(this.$store.state, vuexPath, this.$store.state)
+  _.forEach(getPaths(obj), path => {
+    let propPath = pathJoin(vuexPath, path)
+    Object.defineProperty(model, path, {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        return _.get(this.$store.state, propPath)
+      },
+      set: (value) => {
+        vuexSet.call(this, propPath, value)
+      }
+    })
+  })
+  return model
+}
+
+/**
  * returns an object that can deep set fields in a vuex store
  * @param vuexPath
- * @returns {{}}
+ * @returns {Object}
  */
-export function vuexModel (vuexPath) {
+export function vuexModel (vuexPath, options) {
   if (!_.isString(vuexPath)) throw new Error('VueDeepSet: invalid vuex path string')
+  options = isHash(options)
+    ? options
+    : {}
 
-  if (typeof Proxy === undefined) {
-    let model = {}
-    let obj = _.get(this.$store.state, vuexPath)
-    _.forEach(getPaths(obj), path => {
-      let propPath = pathJoin(vuexPath, path)
-      Object.defineProperty(model, path, {
-        configurable: true,
-        enumerable: true,
-        get: () => {
-          return _.get(this.$store.state, propPath)
-        },
-        set: (value) => {
-          vuexSet.call(this, propPath, value)
-        }
-      })
-    })
-    return model
+  if (options.useProxy === false || typeof Proxy === undefined) {
+    return buildVuexModel.call(this, vuexPath, options)
   } else {
-    return new Proxy(_.get(this.$store.state, vuexPath, this.$store.state), {
+    let obj = _.get(this.$store.state, vuexPath, this.$store.state)
+    let tgt = { model: buildVuexModel.call(this, vuexPath, options) }
+    return new Proxy(obj, {
       get: (target, property) => {
+        if (!(property in tgt.model)) {
+          vuexSet.call(this, pathJoin(vuexPath, property), undefined)
+          tgt.model = buildVuexModel.call(this, vuexPath, options)
+        }
         return _.get(this.$store.state, pathJoin(vuexPath, property))
       },
       set: (target, property, value) => {
@@ -145,6 +170,10 @@ export function vuexModel (vuexPath) {
         return true
       },
       has: (target, property) => {
+        if (!(property in tgt.model)) {
+          vuexSet.call(this, pathJoin(vuexPath, property), undefined)
+          tgt.model = buildVuexModel.call(this, vuexPath, options)
+        }
         return true
       }
     })
@@ -152,38 +181,66 @@ export function vuexModel (vuexPath) {
 }
 
 /**
+ * builds a new model object based on the values
+ * @param obj
+ * @param options
+ * @returns {Object}
+ */
+function buildVueModel (obj, options) {
+  let model = {}
+  _.forEach(getPaths(obj), path => {
+    Object.defineProperty(model, path, {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        return _.get(obj, path)
+      },
+      set: (value) => {
+        vueSet.call(this, obj, path, value)
+      }
+    })
+  })
+  return model
+}
+
+/**
  * returns an object that can deep set fields in a vue.js object
  * @param obj
  * @returns {Array}
  */
-export function vueModel (obj) {
+export function vueModel (obj, options) {
   if (!_.isObject(obj)) throw new Error('VueDeepSet: invalid object')
+  options = isHash(options)
+    ? options
+    : {}
 
-  if (typeof Proxy === 'undefined') {
-    let model = {}
-    _.forEach(getPaths(obj), path => {
-      Object.defineProperty(model, path, {
-        configurable: true,
-        enumerable: true,
-        get: () => {
-          return _.get(obj, path)
-        },
-        set: (value) => {
-          vueSet.call(this, obj, path, value)
-        }
-      })
-    })
-    return model
+  // make _isVue non-enumerable
+  Object.defineProperty(obj, '_isVue', {
+    enumerable: false,
+    writable: true
+  })
+
+  if (options.useProxy === false || typeof Proxy === 'undefined') {
+    return buildVueModel.call(this, obj, options)
   } else {
+    let tgt = { model: buildVueModel.call(this, obj, options) }
     return new Proxy(obj, {
       get: (target, property) => {
-        return _.get(target, property)
+        if (!(property in tgt.model)) {
+          vueSet.call(this, obj, property, undefined)
+          tgt.model = buildVueModel.call(this, obj, options)
+        }
+        return tgt.model[property]
       },
       set: (target, property, value) => {
-        vueSet.call(this, target, property, value)
+        vueSet.call(this, tgt.model, property, value)
         return true
       },
       has: (target, property) => {
+        if (!(property in tgt.model)) {
+          vueSet.call(this, obj, property, undefined)
+          tgt.model = buildVueModel.call(this, obj, options)
+        }
         return true
       }
     })
@@ -195,10 +252,10 @@ export function vueModel (obj) {
  * @param arg
  * @returns {{}}
  */
-export function deepModel (arg) {
+export function deepModel (arg, options) {
   return _.isString(arg)
-    ? vuexModel.call(this, arg)
-    : vueModel.call(this, arg)
+    ? vuexModel.call(this, arg, options)
+    : vueModel.call(this, arg, options)
 }
 
 /**

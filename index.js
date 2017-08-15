@@ -241,6 +241,9 @@ reduce._dependencies = ['dash.forEach', 'dash.isObject', 'dash.isArray', 'dash.i
 
 /* eslint-disable */
 function toPath(pathString) {
+  if (isArray(pathString)) return pathString;
+  if (isNumber(pathString)) return [pathString];
+
   // taken from lodash - https://github.com/lodash/lodash
   var pathRx = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g;
   var pathArray = [];
@@ -257,12 +260,30 @@ function toPath(pathString) {
 toPath._accepts = [String];
 
 /* eslint-disable */
+function isDate(obj) {
+  return obj instanceof Date;
+}
+
+isDate._accepts = ['ANY'];
+
+/* eslint-disable */
+function isEmpty(obj) {
+  if (obj === '' || obj === null || obj === undefined) return true;
+  if ((obj instanceof Buffer || Array.isArray(obj)) && !obj.length) return true;
+  if ((obj instanceof Map || obj instanceof Set) && !obj.size) return true;
+  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && !Object.keys(obj).length) return true;
+  return false;
+}
+
+isEmpty._accepts = ['ANY'];
+
+/* eslint-disable */
 function has(obj, path) {
   var found = true;
-  var fields = isNumber(path) ? [path] : isArray(path) ? path : toPath(path);
+  var fields = isArray(path) ? path : toPath(path);
   if (!fields.length) return false;
   forEach(fields, function (field) {
-    if (obj[field] === undefined) {
+    if (!obj.hasOwnProperty(field) || obj.hasOwnProperty(field) && obj[field] === undefined) {
       found = false;
       return false;
     }
@@ -301,6 +322,8 @@ var _ = {
   reduce: reduce,
   toPath: toPath,
   isArray: isArray,
+  isDate: isDate,
+  isEmpty: isEmpty,
   has: has,
   isNumber: isNumber,
   get: get$1,
@@ -357,7 +380,13 @@ function getPaths(obj) {
       var k = key.match(INVALID_KEY_RX) ? '["' + key + '"]' : '.' + key;
       var cur = ('' + current + k).replace(/^\./, '');
       paths.push(cur);
-      if (isHash(val)) getPaths(val, cur, paths);
+      if (isHash(val) || _.isArray(val)) getPaths(val, cur, paths);
+    });
+  } else if (_.isArray(obj)) {
+    _.forEach(obj, function (val, idx) {
+      var cur = current + '[' + idx + ']';
+      paths.push(cur);
+      if (isHash(val) || _.isArray(val)) getPaths(val, cur, paths);
     });
   }
   return _.uniq(paths);
@@ -387,13 +416,9 @@ function vueSet(obj, path, value) {
   var fields = _.isArray(path) ? path : _.toPath(path);
   var prop = fields.shift();
 
-  if (!fields.length) return Vue.nextTick(function () {
-    return Vue.set(obj, prop, value);
-  });
+  if (!fields.length) return Vue.set(obj, prop, value);
   if (!_.has(obj, prop)) Vue.set(obj, prop, _.isNumber(prop) ? [] : {});
-  Vue.nextTick(function () {
-    return vueSet(obj[prop], fields, value);
-  });
+  vueSet(obj[prop], fields, value);
 }
 
 /**
@@ -428,42 +453,65 @@ function extendMutation() {
 }
 
 /**
- * returns an object that can deep set fields in a vuex store
+ * builds a new model object based on the values
  * @param vuexPath
- * @returns {{}}
+ * @param options
+ * @returns {Object}
  */
-function vuexModel(vuexPath) {
+function buildVuexModel(vuexPath, options) {
   var _this = this;
 
-  if (!_.isString(vuexPath)) throw new Error('VueDeepSet: invalid vuex path string');
-
-  if ((typeof Proxy === 'undefined' ? 'undefined' : _typeof(Proxy)) === undefined) {
-    var model = {};
-    var obj = _.get(this.$store.state, vuexPath);
-    _.forEach(getPaths(obj), function (path) {
-      var propPath = pathJoin(vuexPath, path);
-      Object.defineProperty(model, path, {
-        configurable: true,
-        enumerable: true,
-        get: function get$$1() {
-          return _.get(_this.$store.state, propPath);
-        },
-        set: function set$$1(value) {
-          vuexSet.call(_this, propPath, value);
-        }
-      });
+  var model = {};
+  var obj = _.get(this.$store.state, vuexPath, this.$store.state);
+  _.forEach(getPaths(obj), function (path) {
+    var propPath = pathJoin(vuexPath, path);
+    Object.defineProperty(model, path, {
+      configurable: true,
+      enumerable: true,
+      get: function get$$1() {
+        return _.get(_this.$store.state, propPath);
+      },
+      set: function set$$1(value) {
+        vuexSet.call(_this, propPath, value);
+      }
     });
-    return model;
+  });
+  return model;
+}
+
+/**
+ * returns an object that can deep set fields in a vuex store
+ * @param vuexPath
+ * @returns {Object}
+ */
+function vuexModel(vuexPath, options) {
+  var _this2 = this;
+
+  if (!_.isString(vuexPath)) throw new Error('VueDeepSet: invalid vuex path string');
+  options = isHash(options) ? options : {};
+
+  if (options.useProxy === false || (typeof Proxy === 'undefined' ? 'undefined' : _typeof(Proxy)) === undefined) {
+    return buildVuexModel.call(this, vuexPath, options);
   } else {
-    return new Proxy(_.get(this.$store.state, vuexPath, this.$store.state), {
+    var obj = _.get(this.$store.state, vuexPath, this.$store.state);
+    var tgt = { model: buildVuexModel.call(this, vuexPath, options) };
+    return new Proxy(obj, {
       get: function get$$1(target, property) {
-        return _.get(_this.$store.state, pathJoin(vuexPath, property));
+        if (!(property in tgt.model)) {
+          vuexSet.call(_this2, pathJoin(vuexPath, property), undefined);
+          tgt.model = buildVuexModel.call(_this2, vuexPath, options);
+        }
+        return _.get(_this2.$store.state, pathJoin(vuexPath, property));
       },
       set: function set$$1(target, property, value) {
-        vuexSet.call(_this, pathJoin(vuexPath, property), value);
+        vuexSet.call(_this2, pathJoin(vuexPath, property), value);
         return true;
       },
       has: function has$$1(target, property) {
+        if (!(property in tgt.model)) {
+          vuexSet.call(_this2, pathJoin(vuexPath, property), undefined);
+          tgt.model = buildVuexModel.call(_this2, vuexPath, options);
+        }
         return true;
       }
     });
@@ -471,40 +519,68 @@ function vuexModel(vuexPath) {
 }
 
 /**
+ * builds a new model object based on the values
+ * @param obj
+ * @param options
+ * @returns {Object}
+ */
+function buildVueModel(obj, options) {
+  var _this3 = this;
+
+  var model = {};
+  _.forEach(getPaths(obj), function (path) {
+    Object.defineProperty(model, path, {
+      configurable: true,
+      enumerable: true,
+      get: function get$$1() {
+        return _.get(obj, path);
+      },
+      set: function set$$1(value) {
+        vueSet.call(_this3, obj, path, value);
+      }
+    });
+  });
+  return model;
+}
+
+/**
  * returns an object that can deep set fields in a vue.js object
  * @param obj
  * @returns {Array}
  */
-function vueModel(obj) {
-  var _this2 = this;
+function vueModel(obj, options) {
+  var _this4 = this;
 
   if (!_.isObject(obj)) throw new Error('VueDeepSet: invalid object');
+  options = isHash(options) ? options : {};
 
-  if (typeof Proxy === 'undefined') {
-    var model = {};
-    _.forEach(getPaths(obj), function (path) {
-      Object.defineProperty(model, path, {
-        configurable: true,
-        enumerable: true,
-        get: function get$$1() {
-          return _.get(obj, path);
-        },
-        set: function set$$1(value) {
-          vueSet.call(_this2, obj, path, value);
-        }
-      });
-    });
-    return model;
+  // make _isVue non-enumerable
+  Object.defineProperty(obj, '_isVue', {
+    enumerable: false,
+    writable: true
+  });
+
+  if (options.useProxy === false || typeof Proxy === 'undefined') {
+    return buildVueModel.call(this, obj, options);
   } else {
+    var tgt = { model: buildVueModel.call(this, obj, options) };
     return new Proxy(obj, {
       get: function get$$1(target, property) {
-        return _.get(target, property);
+        if (!(property in tgt.model)) {
+          vueSet.call(_this4, obj, property, undefined);
+          tgt.model = buildVueModel.call(_this4, obj, options);
+        }
+        return tgt.model[property];
       },
       set: function set$$1(target, property, value) {
-        vueSet.call(_this2, target, property, value);
+        vueSet.call(_this4, tgt.model, property, value);
         return true;
       },
       has: function has$$1(target, property) {
+        if (!(property in tgt.model)) {
+          vueSet.call(_this4, obj, property, undefined);
+          tgt.model = buildVueModel.call(_this4, obj, options);
+        }
         return true;
       }
     });
@@ -516,8 +592,8 @@ function vueModel(obj) {
  * @param arg
  * @returns {{}}
  */
-function deepModel(arg) {
-  return _.isString(arg) ? vuexModel.call(this, arg) : vueModel.call(this, arg);
+function deepModel(arg, options) {
+  return _.isString(arg) ? vuexModel.call(this, arg, options) : vueModel.call(this, arg, options);
 }
 
 /**

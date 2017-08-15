@@ -1,3 +1,4 @@
+/* eslint-disable */
 'use strict';
 
 /* eslint-disable */
@@ -235,6 +236,9 @@ reduce._dependencies = ['dash.forEach', 'dash.isObject', 'dash.isArray', 'dash.i
 
 /* eslint-disable */
 function toPath(pathString) {
+  if (isArray(pathString)) return pathString;
+  if (isNumber(pathString)) return [pathString];
+
   // taken from lodash - https://github.com/lodash/lodash
   var pathRx = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g;
   var pathArray = [];
@@ -251,12 +255,30 @@ function toPath(pathString) {
 toPath._accepts = [String];
 
 /* eslint-disable */
+function isDate(obj) {
+  return obj instanceof Date;
+}
+
+isDate._accepts = ['ANY'];
+
+/* eslint-disable */
+function isEmpty(obj) {
+  if (obj === '' || obj === null || obj === undefined) return true;
+  if ((obj instanceof Buffer || Array.isArray(obj)) && !obj.length) return true;
+  if ((obj instanceof Map || obj instanceof Set) && !obj.size) return true;
+  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && !Object.keys(obj).length) return true;
+  return false;
+}
+
+isEmpty._accepts = ['ANY'];
+
+/* eslint-disable */
 function has(obj, path) {
   var found = true;
   var fields = isArray(path) ? path : toPath(path);
   if (!fields.length) return false;
   forEach(fields, function (field) {
-    if (obj[field] === undefined) {
+    if (!obj.hasOwnProperty(field) || obj.hasOwnProperty(field) && obj[field] === undefined) {
       found = false;
       return false;
     }
@@ -295,6 +317,8 @@ var _dash = {
   reduce: reduce,
   toPath: toPath,
   isArray: isArray,
+  isDate: isDate,
+  isEmpty: isEmpty,
   has: has,
   isNumber: isNumber,
   get: get$1,
@@ -305,7 +329,6 @@ var _dash = {
   range: range
 };
 
-/* eslint-disable */
 var DashChain = function DashChain(obj) {
   this._value = obj;
 };
@@ -325,7 +348,7 @@ var _loop = function _loop(name) {
     DashChain.prototype[name] = function () {
       var args = [this._value].concat([].concat(Array.prototype.slice.call(arguments)));
       this._value = fn.apply(this, args);
-      return fn._terminates == true ? this._value : this;
+      return fn._terminates === true ? this._value : this;
     };
   }
 };

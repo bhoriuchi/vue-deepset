@@ -140,21 +140,33 @@ Vuex mutation that should be registered when using vuexSet
 
 Adds the `VUEX_DEEP_SET` mutation to an optional hash of mutations and returns an updated hash of mutations
 
-##### vueModel ( obj:Object )
+##### vueModel ( obj:Object, [options:Object] )
 
 Creates an abstracted model with a set of flat properties that are generated from inspecting the objects properties so that deeply nested properties can be accessed as first level properties
 
-##### vuexModel ( path:String )
+**options**
+* `useProxy=true` {`Boolean`} - disable use of Proxy when false
+
+##### vuexModel ( path:String, [options:Object] )
 
 The equivalent of `vueModel` for `vuex`. Path should point to the base object
 
-##### deepModel ( obj:Object )
+**options**
+* `useProxy=true` {`Boolean`} - disable use of Proxy when false
+
+##### deepModel ( obj:Object, [options:Object] )
 
 Equivalent to `vueModel`
 
-##### deepModel ( path:String )
+**options**
+* `useProxy=true` {`Boolean`} - disable use of Proxy when false
+
+##### deepModel ( path:String, [options:Object] )
 
 Equivalent to `vuexModel`
+
+**options**
+* `useProxy=true` {`Boolean`} - disable use of Proxy when false
 
 ### Non-Plugin usage
 

@@ -17,6 +17,8 @@ var config = {
       'reduce',
       'toPath',
       'isArray',
+      'isDate',
+      'isEmpty',
       'has',
       'isNumber',
       'get',
