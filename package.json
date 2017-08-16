@@ -1,14 +1,14 @@
 {
   "name": "vue-deepset",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Deep set Vue.js objects",
   "main": "index.js",
   "scripts": {
-    "build:copybrc": "cp build/.build.babelrc src/.babelrc",
-    "build:rmbrc": "rm -f src/.babelrc",
-    "build:browser": "browserify index.js -s VueDeepSet > vue-deepset.js",
+    "build:pre": "cp build/.build.babelrc src/.babelrc",
+    "build:post": "rm -f src/.babelrc",
+    "build:browser": "browserify index.js -s VueDeepSet > vue-deepset.js && uglifyjs vue-deepset.js > vue-deepset.min.js",
     "build:node": "rollup -c build/rollup.config.js",
-    "build": "npm run build:copybrc && npm run build:node && npm run build:browser && npm run build:rmbrc",
+    "build": "npm run build:pre && npm run build:node && npm run build:browser && npm run build:post",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "browserify": {
@@ -60,9 +60,9 @@
     "babelify": "^7.3.0",
     "browserify": "^14.1.0",
     "browserify-global-shim": "^1.0.3",
-    "liteutils": "git+https://github.com/bhoriuchi/liteutils.git#master",
     "rollup": "^0.41.4",
     "rollup-plugin-babel": "^2.7.1",
-    "rollupify": "^0.3.9"
+    "rollupify": "^0.3.9",
+    "uglify-js": "^3.0.27"
   }
 }

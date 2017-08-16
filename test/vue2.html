@@ -4,39 +4,49 @@
   <meta charset="UTF-8">
   <title>Title</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
-
-  <!--
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.1.10/vue.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/2.1.2/vuex.js"></script>
-  -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/2.3.1/vuex.js"></script>
   <script src="../vue-deepset.js"></script>
 </head>
 <body>
-<div id="app" class="container">
+<div id="app" class="container-fluid">
   <h3 style="text-align:center;">Vue 2.x Deep Data Model</h3>
   <hr>
   <div class="row">
-    <div class="col-sm-4 col-sm-offset-4">
+    <div class="col-sm-4">
+      <h4>Vue Object</h4>
       <div class="form-group">
         <label>Local Object: {{deepPath}}</label>
         <input class="form-control" type="text" v-model="vueModel['path.to[&quot;deep nested&quot;]']">
       </div>
+      <div class="form-group">
+        <label>Local Object: path.foo[0].bar</label>
+        <input class="form-control" type="text" v-model.number="vueModel['path.foo[0].bar']">
+      </div>
+      <div class="form-group">
+        <label>Local Object: path.foo[3].bar</label>
+        <input class="form-control" type="text" v-model.number="vueModel['path.foo[3].bar']">
+      </div>
+      <div class="form-group">
+        <label>Local Object: newVal</label>
+        <input class="form-control" type="text" v-model="vueModel['newVal.obj']">
+      </div>
+    </div>
+    <div class="col-sm-8">
+      <div class="col-sm-6">
+        <label>Original Vue Object</label>
+        <pre>{{obj}}</pre>
+      </div>
+      <div class="col-sm-6">
+        <label>Modeled Vue object</label>
+        <pre>{{vueModel}}</pre>
+      </div>
     </div>
   </div>
+  <hr>
   <div class="row">
-    <div class="col-sm-4 col-sm-offset-2">
-      <label>Original Vue Object</label>
-      <pre>{{obj}}</pre>
-    </div>
     <div class="col-sm-4">
-      <label>Modeled Vue object</label>
-      <pre>{{vueModel}}</pre>
-    </div>
-  </div>
-  <div class="row">
-    <div class="col-sm-4 col-sm-offset-4">
+      <h4>Vuex Object</h4>
       <div class="form-group">
         <label>Vuex State: formData.message</label>
         <input class="form-control" type="text" v-model="vuexModel.message">
@@ -46,25 +56,29 @@
         <input class="form-control" type="text" v-model.number="vuexModel['foos[0].bar']">
       </div>
       <div class="form-group">
+        <label>Vuex State: formData['foos[3].bar']</label>
+        <input class="form-control" type="text" v-model.number="vuexModel['foos[3].bar']">
+      </div>
+      <div class="form-group">
         <label>Vuex State: formData.newVal</label>
         <input class="form-control" type="text" v-model="vuexModel['newVal.obj']">
       </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="col-sm-4 col-sm-offset-2">
-      <label>Original Vuex Object</label>
-      <pre>{{$store.state.formData}}</pre>
+    <div class="col-sm-8">
+      <div class="col-sm-6">
+        <label>Original Vuex Object</label>
+        <pre>{{$store.state.formData}}</pre>
+      </div>
+      <div class="col-sm-6">
+        <label>Modeled Vuex object</label>
+        <pre>{{vuexModel}}</pre>
+      </div>
     </div>
-    <div class="col-sm-4">
-      <label>Modeled Vuex object</label>
-      <pre>{{vuexModel}}</pre>
-    </div>
-  </div>
 </div>
 <script>
   Vue.use(VueDeepSet)
   var store = new Vuex.Store({
+    strict: true,
     state: {
       formData: {
         message: 'Hello Vuex!',
@@ -95,7 +109,10 @@
         path: {
           to: {
             'deep nested': 'Hello Vue!'
-          }
+          },
+          foo: [
+            { bar: 1 }
+          ]
         }
       }
     }
