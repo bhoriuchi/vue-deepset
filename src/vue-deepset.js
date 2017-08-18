@@ -99,10 +99,11 @@ export function vuexModel (vuexPath, options) {
 
   return new Proxy(obj, {
     get: (target, property) => {
+      if (typeof property === 'symbol') return target[property]
+      if (property === 'toJSON') return target.toJSON
       if (property === '_isVue') return false // _isVue is always false
-
       // add any missing paths to the source object and add the property
-      if (!_.hasPath(obj, property)) {
+      if (!_.hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
         vuexSet.call(this, pathJoin(vuexPath, property), undefined)
         tgt.model = buildVuexModel.call(this, vuexPath, options)
       }
@@ -114,8 +115,10 @@ export function vuexModel (vuexPath, options) {
       return true
     },
     has: (target, property) => {
+      if (typeof property === 'symbol') return target[property]
+      if (property === 'toJSON') return target.toJSON
       if (property === '_isVue') return true
-      if (!_.hasPath(obj, property)) {
+      if (!_.hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
         vuexSet.call(this, pathJoin(vuexPath, property), undefined)
         tgt.model = buildVuexModel.call(this, vuexPath, options)
       }
@@ -164,9 +167,11 @@ export function vueModel (obj, options) {
     let tgt = { model: buildVueModel.call(this, obj, options) }
     return new Proxy(obj, {
       get: (target, property) => {
+        if (typeof property === 'symbol') return target[property]
+        if (property === 'toJSON') return target.toJSON
         if (property === '_isVue') return false // _isVue is always false
 
-        if (!_.hasPath(tgt.model, property)) {
+        if (!_.hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
           vueSet.call(this, obj, property, undefined)
           tgt.model = buildVueModel.call(this, obj, options)
         }
@@ -179,7 +184,10 @@ export function vueModel (obj, options) {
       },
       has: (target, property) => {
         if (property === '_isVue') return true
-        if (!_.hasPath(tgt.model, property)) {
+        if (typeof property === 'symbol') return target[property]
+        if (property === 'toJSON') return target.toJSON
+
+        if (!_.hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
           vueSet.call(this, obj, property, undefined)
           tgt.model = buildVueModel.call(this, obj, options)
         }

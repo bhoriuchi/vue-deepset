@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproduce issue 4</title>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.js"></script>
+  <script src="../vue-deepset.js"></script>
+</head>
+<body>
+<div id="app">
+  <input type="text" v-model="order['a[0]']">
+  <pre v-text="order"></pre>
+</div>
+
+<script>
+  Vue.use(VueDeepSet);
+  var app = new Vue({
+    el: '#app',
+    data() {
+      return {
+        orderShadow: {a:[]}
+      }
+    },
+    computed: {
+      order() {
+        return this.$deepModel(this.orderShadow);
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

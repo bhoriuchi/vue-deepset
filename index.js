@@ -342,10 +342,11 @@ function vuexModel(vuexPath, options) {
 
   return new Proxy(obj, {
     get: function get$$1(target, property) {
+      if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
+      if (property === 'toJSON') return target.toJSON;
       if (property === '_isVue') return false; // _isVue is always false
-
       // add any missing paths to the source object and add the property
-      if (!hasPath(obj, property)) {
+      if (!hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
         vuexSet.call(_this2, pathJoin(vuexPath, property), undefined);
         tgt.model = buildVuexModel.call(_this2, vuexPath, options);
       }
@@ -357,8 +358,10 @@ function vuexModel(vuexPath, options) {
       return true;
     },
     has: function has(target, property) {
+      if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
+      if (property === 'toJSON') return target.toJSON;
       if (property === '_isVue') return true;
-      if (!hasPath(obj, property)) {
+      if (!hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
         vuexSet.call(_this2, pathJoin(vuexPath, property), undefined);
         tgt.model = buildVuexModel.call(_this2, vuexPath, options);
       }
@@ -409,9 +412,11 @@ function vueModel(obj, options) {
     var tgt = { model: buildVueModel.call(this, obj, options) };
     return new Proxy(obj, {
       get: function get$$1(target, property) {
+        if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
+        if (property === 'toJSON') return target.toJSON;
         if (property === '_isVue') return false; // _isVue is always false
 
-        if (!hasPath(tgt.model, property)) {
+        if (!hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
           vueSet.call(_this4, obj, property, undefined);
           tgt.model = buildVueModel.call(_this4, obj, options);
         }
@@ -424,7 +429,10 @@ function vueModel(obj, options) {
       },
       has: function has(target, property) {
         if (property === '_isVue') return true;
-        if (!hasPath(tgt.model, property)) {
+        if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
+        if (property === 'toJSON') return target.toJSON;
+
+        if (!hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
           vueSet.call(_this4, obj, property, undefined);
           tgt.model = buildVueModel.call(_this4, obj, options);
         }
