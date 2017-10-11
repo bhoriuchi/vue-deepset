@@ -257,7 +257,9 @@ function vueSet(obj, path, value) {
   var prop = fields.shift();
 
   if (!fields.length) return Vue.set(obj, prop, value);
-  if (!hasPath(obj, prop)) Vue.set(obj, prop, fields.length >= 1 && typeof fields[0] === 'number' ? [] : {});
+  if (!hasPath(obj, prop) || obj[prop] === null) {
+    Vue.set(obj, prop, fields.length >= 1 && typeof fields[0] === 'number' ? [] : {});
+  }
 
   vueSet(obj[prop], fields, value);
 }
@@ -329,7 +331,7 @@ function buildVuexModel(vuexPath, options) {
 function vuexModel(vuexPath, options) {
   var _this2 = this;
 
-  if (!(typeof vuexPath === 'string')) throw new Error('[vue-deepset]: invalid vuex path string');
+  if (typeof vuexPath !== 'string' || !vuexPath) throw new Error('[vue-deepset]: invalid vuex path string');
   if (!hasPath(this.$store.state, vuexPath)) throw new Error('[vue-deepset]: Cannot find path "' + vuexPath + '" in Vuex store');
   options = isHash(options) ? options : {};
 
@@ -404,7 +406,7 @@ function buildVueModel(obj, options) {
 function vueModel(obj, options) {
   var _this4 = this;
 
-  if (!((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object')) throw new Error('[vue-deepset]: invalid object specified for vue model');
+  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object' || !obj) throw new Error('[vue-deepset]: invalid object specified for vue model');
   options = isHash(options) ? options : {};
 
   if (options.useProxy === false || typeof Proxy === 'undefined') {

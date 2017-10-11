@@ -1,6 +1,6 @@
 {
   "name": "vue-deepset",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Deep set Vue.js objects",
   "main": "index.js",
   "scripts": {

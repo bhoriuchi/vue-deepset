@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproduce issue 4</title>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.js"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/2.3.1/vuex.js"></script> -->
+  <script src="../vue-deepset.js"></script>
+</head>
+<body>
+<div id="app">
+  <input type="text" v-model="model['propertyA.childPropertyA']">
+  <pre v-text="fields"></pre>
+</div>
+
+<script>
+  Vue.use(VueDeepSet);
+
+  var app = new Vue({
+    el: '#app',
+    computed: {
+      model() {
+        return this.$deepModel(this.fields);
+      }
+    },
+    data: {
+      fields: {
+        propertyA: null
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
