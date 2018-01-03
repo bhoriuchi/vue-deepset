@@ -62,7 +62,8 @@ function buildVuexModel (vuexPath, options) {
   let model = {}
 
   let obj = _.get(this.$store.state, vuexPath)
-  _.forEach(getPaths(obj), path => {
+  const paths = getPaths(obj)
+  _.forEach(paths, path => {
     let propPath = pathJoin(vuexPath, path)
     Object.defineProperty(model, path, {
       configurable: true,

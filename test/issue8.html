@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproduce issue 8</title>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.0.1/vuex.js"></script>
+  <script src="../vue-deepset.js"></script>
+</head>
+<body>
+<div id="app">
+  <div>
+    <template v-for="(element, idx) in order['elements']">			
+      <input :key='idx' v-model.number="order[`elements[&quot;${idx}&quot;].val`]" /><br/>
+    </template>		
+  </div>
+  <pre v-text="$store.state.order"></pre>
+</div>
+
+<script>
+  Vue.use(VueDeepSet)
+  var store = new Vuex.Store({
+    strict: true,
+    state: {
+      order: {
+          elements: {
+            1:{						
+              val: 1
+            },
+            2:{						
+              val: 2
+            }
+          }
+      }
+    },
+    mutations: VueDeepSet.extendMutation({})
+  })
+  var app = new Vue({
+    el: '#app',
+    store,
+    computed: {
+      order() {
+        return this.$deepModel('order')
+      }
+    }
+  })
+</script>
+
+</body>
+</html>

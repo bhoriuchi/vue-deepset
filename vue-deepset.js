@@ -80,15 +80,20 @@ function forEach(obj, fn) {
  * @returns {*}
  */
 function get(obj, path, defaultValue) {
-  var fields = Array.isArray(path) ? path : toPath(path);
-  var idx = 0;
-  var length = fields.length;
-
-  while (obj !== null && idx < length) {
-    obj = obj[fields[idx++]];
+  try {
+    var o = obj;
+    var fields = Array.isArray(path) ? path : toPath(path);
+    while (fields.length) {
+      var prop = fields.shift();
+      o = o[prop];
+      if (!fields.length) {
+        return o;
+      }
+    }
+  } catch (err) {
+    return defaultValue;
   }
-
-  return idx && idx === length ? obj : defaultValue;
+  return defaultValue;
 }
 
 /**
@@ -189,7 +194,7 @@ var toConsumableArray = function (arr) {
 };
 
 var INVALID_KEY_RX = /^\d|[^a-zA-Z0-9_]/gm;
-
+var INT_KEY_RX = /^\d+$/;
 /**
  * returns true if object is non empty object
  * @param obj
@@ -215,6 +220,20 @@ function pathJoin(base, path) {
 }
 
 /**
+ * simple helper to push paths and determine if more
+ * paths need to be constructed
+ * @param {*} obj 
+ * @param {*} current 
+ * @param {*} paths 
+ */
+function pushPaths(obj, current, paths) {
+  paths.push(current);
+  if (isHash(obj) || Array.isArray(obj)) {
+    getPaths(obj, current, paths);
+  }
+}
+
+/**
  * generates an array of paths to use when creating an abstracted object
  * @param obj
  * @param current
@@ -227,16 +246,23 @@ function getPaths(obj) {
 
   if (isHash(obj)) {
     forEach(obj, function (val, key) {
-      var k = key.match(INVALID_KEY_RX) ? '["' + key + '"]' : '.' + key;
-      var cur = ('' + current + k).replace(/^\./, '');
-      paths.push(cur);
-      if (isHash(val) || Array.isArray(val)) getPaths(val, cur, paths);
+      if (key.match(INT_KEY_RX) !== null) {
+        // is index
+        pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
+        pushPaths(val, (current + '[' + key + ']').replace(/^\./, ''), paths);
+        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
+      } else if (key.match(INVALID_KEY_RX) !== null) {
+        // must quote
+        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
+      } else {
+        pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
+      }
     });
   } else if (Array.isArray(obj)) {
     forEach(obj, function (val, idx) {
-      var cur = current + '[' + idx + ']';
-      paths.push(cur);
-      if (isHash(val) || Array.isArray(val)) getPaths(val, cur, paths);
+      pushPaths(val, (current + '.' + idx).replace(/^\./, ''), paths);
+      pushPaths(val, (current + '[' + idx + ']').replace(/^\./, ''), paths);
+      pushPaths(val, (current + '["' + idx + '"]').replace(/^\./, ''), paths);
     });
   }
   return [].concat(toConsumableArray(new Set(paths)));
@@ -306,7 +332,8 @@ function buildVuexModel(vuexPath, options) {
   var model = {};
 
   var obj = get(this.$store.state, vuexPath);
-  forEach(getPaths(obj), function (path) {
+  var paths = getPaths(obj);
+  forEach(paths, function (path) {
     var propPath = pathJoin(vuexPath, path);
     Object.defineProperty(model, path, {
       configurable: true,

@@ -13,7 +13,13 @@ export function toPath (pathString) {
   let pathArray = []
 
   pathString.replace(pathRx, (match, number, quote, string) => {
-    pathArray.push(quote ? string : (number !== undefined) ? Number(number) : match)
+    pathArray.push(
+      quote
+        ? string
+        : (number !== undefined)
+          ? Number(number)
+          : match
+    )
     return pathArray[pathArray.length - 1]
   })
   return pathArray
@@ -50,19 +56,22 @@ export function forEach (obj, fn) {
  * @returns {*}
  */
 export function get (obj, path, defaultValue) {
-  let fields = Array.isArray(path)
-    ? path
-    : toPath(path)
-  let idx = 0
-  const length = fields.length
-
-  while (obj !== null && idx < length) {
-    obj = obj[fields[idx++]]
+  try {
+    let o = obj
+    const fields = Array.isArray(path)
+      ? path
+      : toPath(path)
+    while (fields.length) {
+      const prop = fields.shift()
+      o = o[prop]
+      if (!fields.length) {
+        return o
+      }
+    }
+  } catch (err) {
+    return defaultValue
   }
-
-  return (idx && idx === length)
-    ? obj
-    : defaultValue
+  return defaultValue
 }
 
 /**

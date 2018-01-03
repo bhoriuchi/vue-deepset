@@ -1,6 +1,6 @@
 import * as _ from './liteutils'
 const INVALID_KEY_RX = /^\d|[^a-zA-Z0-9_]/gm
-
+const INT_KEY_RX = /^\d+$/
 /**
  * returns true if object is non empty object
  * @param obj
@@ -29,6 +29,20 @@ export function pathJoin (base, path) {
 }
 
 /**
+ * simple helper to push paths and determine if more
+ * paths need to be constructed
+ * @param {*} obj 
+ * @param {*} current 
+ * @param {*} paths 
+ */
+export function pushPaths (obj, current, paths) {
+  paths.push(current)
+  if (isHash(obj) || Array.isArray(obj)) {
+    getPaths(obj, current, paths)
+  }
+}
+
+/**
  * generates an array of paths to use when creating an abstracted object
  * @param obj
  * @param current
@@ -38,16 +52,21 @@ export function pathJoin (base, path) {
 export function getPaths (obj, current = '', paths = []) {
   if (isHash(obj)) {
     _.forEach(obj, (val, key) => {
-      let k = key.match(INVALID_KEY_RX) ? `["${key}"]` : `.${key}`
-      let cur = `${current}${k}`.replace(/^\./, '')
-      paths.push(cur)
-      if (isHash(val) || Array.isArray(val)) getPaths(val, cur, paths)
+      if (key.match(INT_KEY_RX) !== null) { // is index
+        pushPaths(val, `${current}.${key}`.replace(/^\./, ''), paths)
+        pushPaths(val, `${current}[${key}]`.replace(/^\./, ''), paths)
+        pushPaths(val, `${current}["${key}"]`.replace(/^\./, ''), paths)
+      } else if (key.match(INVALID_KEY_RX) !== null) { // must quote
+        pushPaths(val, `${current}["${key}"]`.replace(/^\./, ''), paths)
+      } else {
+        pushPaths(val, `${current}.${key}`.replace(/^\./, ''), paths)
+      }
     })
   } else if (Array.isArray(obj)) {
     _.forEach(obj, (val, idx) => {
-      let cur = `${current}[${idx}]`
-      paths.push(cur)
-      if (isHash(val) || Array.isArray(val)) getPaths(val, cur, paths)
+      pushPaths(val, `${current}.${idx}`.replace(/^\./, ''), paths)
+      pushPaths(val, `${current}[${idx}]`.replace(/^\./, ''), paths)
+      pushPaths(val, `${current}["${idx}"]`.replace(/^\./, ''), paths)
     })
   }
   return [ ...new Set(paths) ]
