@@ -4,6 +4,7 @@
   "description": "Deep set Vue.js objects",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint src/",
     "build:pre": "cp build/.build.babelrc src/.babelrc",
     "build:post": "rm -f src/.babelrc",
     "build:browser": "browserify index.js -s VueDeepSet > vue-deepset.js && uglifyjs vue-deepset.js > vue-deepset.min.js",
@@ -61,6 +62,10 @@
     "browserify": "^14.1.0",
     "browserify-global-shim": "^1.0.3",
     "eslint": "^4.15.0",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1",
     "rollup": "^0.41.4",
     "rollup-plugin-babel": "^2.7.1",
     "rollupify": "^0.3.9",

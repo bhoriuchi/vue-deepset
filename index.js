@@ -32,7 +32,7 @@ function toPath(pathString) {
  * @param obj
  * @param fn
  */
-function forEach(obj, fn) {
+function forEach(obj, fn, throwErrors) {
   try {
     if (Array.isArray(obj)) {
       var idx = 0;
@@ -67,7 +67,7 @@ function forEach(obj, fn) {
       }
     }
   } catch (err) {
-    return;
+    if (throwErrors) throw err;
   }
 }
 
@@ -212,7 +212,7 @@ function isHash(obj) {
 function pathJoin(base, path) {
   try {
     var connector = path.match(/^\[/) ? '' : '.';
-    return '' + (base ? base : '') + (base ? connector : '') + path;
+    return '' + (base || '') + (base ? connector : '') + path;
   } catch (error) {
     return '';
   }
@@ -221,9 +221,9 @@ function pathJoin(base, path) {
 /**
  * simple helper to push paths and determine if more
  * paths need to be constructed
- * @param {*} obj 
- * @param {*} current 
- * @param {*} paths 
+ * @param {*} obj
+ * @param {*} current
+ * @param {*} paths
  */
 function pushPaths(obj, current, paths) {
   paths.push(current);

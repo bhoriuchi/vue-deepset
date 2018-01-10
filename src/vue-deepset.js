@@ -3,7 +3,7 @@
  * @description Deep set Vue.js objects
  */
 import * as _ from './liteutils'
-import { isHash, getPaths, pathJoin } from './utils'
+import { getPaths, pathJoin } from './utils'
 import Vue from 'vue'
 
 /**

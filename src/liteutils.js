@@ -30,7 +30,7 @@ export function toPath (pathString) {
  * @param obj
  * @param fn
  */
-export function forEach (obj, fn) {
+export function forEach (obj, fn, throwErrors) {
   try {
     if (Array.isArray(obj)) {
       let idx = 0
@@ -44,7 +44,7 @@ export function forEach (obj, fn) {
       }
     }
   } catch (err) {
-    return
+    if (throwErrors) throw err
   }
 }
 
@@ -80,7 +80,7 @@ export function get (obj, path, defaultValue) {
  * @param path
  * @returns {boolean}
  */
-export function hasPath(object, path) {
+export function hasPath (object, path) {
   path = toPath(path)
 
   let index = -1

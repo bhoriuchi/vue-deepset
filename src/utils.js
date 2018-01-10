@@ -22,7 +22,7 @@ export function isHash (obj) {
 export function pathJoin (base, path) {
   try {
     let connector = path.match(/^\[/) ? '' : '.'
-    return `${base ? base : ''}${base ? connector : ''}${path}`
+    return `${base || ''}${base ? connector : ''}${path}`
   } catch (error) {
     return ''
   }
@@ -31,9 +31,9 @@ export function pathJoin (base, path) {
 /**
  * simple helper to push paths and determine if more
  * paths need to be constructed
- * @param {*} obj 
- * @param {*} current 
- * @param {*} paths 
+ * @param {*} obj
+ * @param {*} current
+ * @param {*} paths
  */
 export function pushPaths (obj, current, paths) {
   paths.push(current)
