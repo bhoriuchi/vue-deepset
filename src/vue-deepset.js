@@ -8,20 +8,23 @@ import Vue from 'vue'
 
 /**
  * deep sets a Vue.js object creating reactive properties if they do not exist
- * @param obj
+ * @param object
  * @param path
  * @param value
  */
-export function vueSet (obj, path, value) {
-  let fields = Array.isArray(path) ? path : _.toPath(path)
-  let prop = fields.shift()
+export function vueSet (object, path, value) {
+  const parts = _.toPath(path)
+  let obj = object
 
-  if (!fields.length) return Vue.set(obj, prop, value)
-  if (!_.hasPath(obj, prop) || obj[prop] === null) {
-    Vue.set(obj, prop, (fields.length >= 1 && typeof fields[0] === 'number') ? [] : {})
+  while (parts.length) {
+    const key = parts.shift()
+    if (!parts.length) {
+      Vue.set(obj, key, value)
+    } else if (!_.hasPath(obj, key)) {
+      Vue.set(obj, key, key === 'number' ? [] : {})
+    }
+    obj = obj[key]
   }
-
-  vueSet(obj[prop], fields, value)
 }
 
 /**
@@ -86,19 +89,19 @@ function buildVuexModel (vuexPath, options) {
  * @returns {Object}
  */
 export function vuexModel (vuexPath, options) {
-  if (typeof vuexPath !== 'string' || !vuexPath) throw new Error('[vue-deepset]: invalid vuex path string')
-  if (!_.hasPath(this.$store.state, vuexPath)) throw new Error(`[vue-deepset]: Cannot find path "${vuexPath}" in Vuex store`)
-  options = isHash(options)
-    ? options
-    : {}
-
-  // non-proxy
-  if (options.useProxy === false || typeof Proxy === undefined) {
-    return buildVuexModel.call(this, vuexPath, options)
+  const opts = Object.assign({}, options)
+  if (typeof vuexPath !== 'string' || !vuexPath) {
+    throw new Error('[vue-deepset]: invalid vuex path string')
+  } else if (!_.hasPath(this.$store.state, vuexPath)) {
+    throw new Error(`[vue-deepset]: Cannot find path "${vuexPath}" in Vuex store`)
+  } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
+    return buildVuexModel.call(this, vuexPath, opts)
   }
 
-  let obj = _.get(this.$store.state, vuexPath)
-  let tgt = { model: buildVuexModel.call(this, vuexPath, options) }
+  const obj = _.get(this.$store.state, vuexPath)
+  const tgt = {
+    model: buildVuexModel.call(this, vuexPath, opts)
+  }
 
   return new Proxy(obj, {
     get: (target, property) => {
@@ -106,9 +109,13 @@ export function vuexModel (vuexPath, options) {
       if (property === 'toJSON') return target.toJSON
       if (property === '_isVue') return false // _isVue is always false
       // add any missing paths to the source object and add the property
-      if (!_.hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
+      if (
+        opts.dynamicUpdates !== false &&
+        !_.hasPath(obj, property) &&
+        (typeof property === 'string' || typeof property === 'number')
+      ) {
         vuexSet.call(this, pathJoin(vuexPath, property), undefined)
-        tgt.model = buildVuexModel.call(this, vuexPath, options)
+        tgt.model = buildVuexModel.call(this, vuexPath, opts)
       }
       return tgt.model[property]
     },
@@ -121,9 +128,13 @@ export function vuexModel (vuexPath, options) {
       if (typeof property === 'symbol') return target[property]
       if (property === 'toJSON') return target.toJSON
       if (property === '_isVue') return true
-      if (!_.hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
+      if (
+        opts.dynamicUpdates !== false &&
+        !_.hasPath(obj, property) &&
+        (typeof property === 'string' || typeof property === 'number')
+      ) {
         vuexSet.call(this, pathJoin(vuexPath, property), undefined)
-        tgt.model = buildVuexModel.call(this, vuexPath, options)
+        tgt.model = buildVuexModel.call(this, vuexPath, opts)
       }
       return true
     }
@@ -159,45 +170,50 @@ function buildVueModel (obj, options) {
  * @returns {Object}
  */
 export function vueModel (obj, options) {
-  if (typeof obj !== 'object' || !obj) throw new Error('[vue-deepset]: invalid object specified for vue model')
-  options = isHash(options)
-    ? options
-    : {}
-
-  if (options.useProxy === false || typeof Proxy === 'undefined') {
-    return buildVueModel.call(this, obj, options)
-  } else {
-    let tgt = { model: buildVueModel.call(this, obj, options) }
-    return new Proxy(obj, {
-      get: (target, property) => {
-        if (typeof property === 'symbol') return target[property]
-        if (property === 'toJSON') return target.toJSON
-        if (property === '_isVue') return false // _isVue is always false
-
-        if (!_.hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
-          vueSet.call(this, obj, property, undefined)
-          tgt.model = buildVueModel.call(this, obj, options)
-        }
-        return tgt.model[property]
-      },
-      set: (target, property, value) => {
-        if (tgt.model[property] === value) return true
-        tgt.model[property] = value
-        return true
-      },
-      has: (target, property) => {
-        if (property === '_isVue') return true
-        if (typeof property === 'symbol') return target[property]
-        if (property === 'toJSON') return target.toJSON
-
-        if (!_.hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
-          vueSet.call(this, obj, property, undefined)
-          tgt.model = buildVueModel.call(this, obj, options)
-        }
-        return true
-      }
-    })
+  const opts = Object.assign({}, options)
+  if (typeof obj !== 'object' || !obj) {
+    throw new Error('[vue-deepset]: invalid object specified for vue model')
+  } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
+    return buildVueModel.call(this, obj, opts)
   }
+  const tgt = { model: buildVueModel.call(this, obj, opts) }
+  return new Proxy(obj, {
+    get: (target, property) => {
+      if (typeof property === 'symbol') return target[property]
+      if (property === 'toJSON') return target.toJSON
+      if (property === '_isVue') return false // _isVue is always false
+
+      if (
+        opts.dynamicUpdates !== false &&
+        !_.hasPath(tgt.model, property) &&
+        (typeof property === 'string' || typeof property === 'number')
+      ) {
+        vueSet.call(this, obj, property, undefined)
+        tgt.model = buildVueModel.call(this, obj, opts)
+      }
+      return tgt.model[property]
+    },
+    set: (target, property, value) => {
+      if (tgt.model[property] === value) return true
+      tgt.model[property] = value
+      return true
+    },
+    has: (target, property) => {
+      if (property === '_isVue') return true
+      if (typeof property === 'symbol') return target[property]
+      if (property === 'toJSON') return target.toJSON
+
+      if (
+        opts.dynamicUpdates !== false &&
+        !_.hasPath(tgt.model, property) &&
+        (typeof property === 'string' || typeof property === 'number')
+      ) {
+        vueSet.call(this, obj, property, undefined)
+        tgt.model = buildVueModel.call(this, obj, opts)
+      }
+      return true
+    }
+  })
 }
 
 /**

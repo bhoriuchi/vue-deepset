@@ -7,6 +7,8 @@ Binding deeply nested data properties and vuex data to a form or component can b
 
 **Note** `vueModel` and `vuexModel` use [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) objects if supported by the browser and fallback to an object with generated fields based on the target object. Because of this, it is always best to pre-define the properties of an object.
 
+Also note that models are flat and once built can set vue/vuex directly using `model[path] = value`
+
 ### Examples
 
 Full examples can be found in the [tests](https://github.com/bhoriuchi/vue-deepset/tree/master/test) folder on the project repo
@@ -120,10 +122,6 @@ var app = new Vue({
 
 ### API
 
-##### sanitizePath ( path:String )
-
-Converts a path string into the correct format for accessing deeply nested models
-
 ##### vueSet ( obj:Object, path:String, value:* )
 
 Deep sets a path with a value on a local data object so that is is reactive
@@ -146,6 +144,7 @@ Creates an abstracted model with a set of flat properties that are generated fro
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
+* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ##### vuexModel ( path:String, [options:Object] )
 
@@ -153,6 +152,7 @@ The equivalent of `vueModel` for `vuex`. Path should point to the base object
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
+* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ##### deepModel ( obj:Object, [options:Object] )
 
@@ -160,6 +160,7 @@ Equivalent to `vueModel`
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
+* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ##### deepModel ( path:String, [options:Object] )
 
@@ -167,6 +168,7 @@ Equivalent to `vuexModel`
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
+* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ### Non-Plugin usage
 
