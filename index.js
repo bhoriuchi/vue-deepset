@@ -285,7 +285,7 @@ function vueSet(object, path, value) {
     var key = parts.shift();
     if (!parts.length) {
       Vue.set(obj, key, value);
-    } else if (!hasPath(obj, key)) {
+    } else if (!hasPath(obj, key) || obj[key] === null) {
       Vue.set(obj, key, key === 'number' ? [] : {});
     }
     obj = obj[key];

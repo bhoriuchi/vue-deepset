@@ -20,7 +20,7 @@ export function vueSet (object, path, value) {
     const key = parts.shift()
     if (!parts.length) {
       Vue.set(obj, key, value)
-    } else if (!_.hasPath(obj, key)) {
+    } else if (!_.hasPath(obj, key) || obj[key] === null) {
       Vue.set(obj, key, key === 'number' ? [] : {})
     }
     obj = obj[key]
