@@ -12,6 +12,12 @@
   <input type="text" v-model="model[path1]">
   <br>
   <input type="text" v-model="model[path2]">
+  <br>
+  <input type="text" v-model="model[path3]">
+  <br>
+  <input type="text" v-model="model[path4]">
+  <br>
+  <input type="text" v-model="model[path5]">
   <pre v-text="data"></pre>
 </div>
 
@@ -23,6 +29,9 @@
       return {
         path1: '["test.a"].a.c',
         path2: '["propertygroup.a"]',
+        path3: '["propertygroup.b"]',
+        path4: 'propertygroup["b"]',
+        path5: ['propertygroup.b'],
         data: {
           'test.a': {
             a: {
@@ -30,7 +39,10 @@
             }
           },
           'propertygroup.a': 'value-a',
-          'propertygroup.b': 'balue-b'
+          'propertygroup.b': 'value-b',
+          propertygroup: {
+            b: 'x'
+          }
         }
       }
     },

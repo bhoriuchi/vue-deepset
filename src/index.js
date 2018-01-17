@@ -18,8 +18,11 @@ const rePropName = RegExp(
   '(?=(?:\\.|\\[\\])(?:\\.|\\[\\]|$))'
   , 'g')
 
-// modified from lodash
+// modified from lodash - https://github.com/lodash/lodash
 function toPath (string) {
+  if (Array.isArray(string)) {
+    return string
+  }
   const result = []
   if (string.charCodeAt(0) === charCodeOfDot) {
     result.push('')
@@ -38,13 +41,21 @@ function toPath (string) {
 
 function noop () {}
 
+function hasOwnProperty (object, property) {
+  return Object.prototype.hasOwnProperty.call(object, property)
+}
+
+function deepsetError (message) {
+  return new Error(`[vue-deepset]: ${message}`);
+}
+
 function isObjectLike (object) {
   return typeof object === 'object' && object !== null
 }
 
 function pathJoin (base, path) {
   try {
-    let connector = path.match(/^\[/) ? '' : '.'
+    const connector = path.match(/^\[/) ? '' : '.'
     return `${base || ''}${base ? connector : ''}${path}`
   } catch (error) {
     return ''
@@ -96,11 +107,11 @@ function getPaths (object, current = '', paths = []) {
         pushPaths(val, `${current}.${key}`.replace(/^\./, ''), paths)
         pushPaths(val, `${current}[${key}]`.replace(/^\./, ''), paths)
         pushPaths(val, `${current}["${key}"]`.replace(/^\./, ''), paths)
-      } else if (key.match(invalidKey) !== null) { // must quote
-        pushPaths(val, `${current}["${key}"]`.replace(/^\./, ''), paths)
-      } else {
+      } else if (!key.match(invalidKey)) {
         pushPaths(val, `${current}.${key}`.replace(/^\./, ''), paths)
       }
+      // always add the absolute array notation path
+      pushPaths(val, `${current}["${key}"]`.replace(/^\./, ''), paths)
     })
   }
   return [ ...new Set(paths) ]
@@ -109,9 +120,7 @@ function getPaths (object, current = '', paths = []) {
 function get (obj, path, defaultValue) {
   try {
     let o = obj
-    const fields = Array.isArray(path)
-      ? path
-      : toPath(path)
+    const fields = Array.isArray(path) ? path : toPath(path)
     while (fields.length) {
       const prop = fields.shift()
       o = o[prop]
@@ -125,16 +134,6 @@ function get (obj, path, defaultValue) {
   return defaultValue
 }
 
-function hasOwnProperty (object, property) {
-  return Object.prototype.hasOwnProperty.call(object, property)
-}
-
-function getProp (object, property) {
-  return Object.keys(object).indexOf(property) === -1
-    ? get(object, property)
-    : object[property]
-}
-
 function getProxy (vm, base, options) {
   noop(options) // for future potential options
   const isVuex = typeof base === 'string'
@@ -142,7 +141,7 @@ function getProxy (vm, base, options) {
 
   return new Proxy(object, {
     get: (target, property) => {
-      return getProp(target, property)
+      return get(target, property)
     },
     set: (target, property, value) => {
       isVuex
@@ -167,7 +166,7 @@ function getProxy (vm, base, options) {
     },
     getOwnPropertyDescriptor: (target, property) => {
       return {
-        value: getProp(target, property),
+        value: get(target, property),
         writable: false,
         enumerable: true,
         configurable: true
@@ -206,22 +205,30 @@ function buildVuexModel (vm, vuexPath, options) {
 }
 
 export function vueSet (object, path, value) {
-  const parts = toPath(path)
-  let obj = object
-  while (parts.length) {
-    const key = parts.shift()
-    if (!parts.length) {
-      Vue.set(obj, key, value)
-    } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
-      Vue.set(obj, key, typeof key === 'number' ? [] : {})
+  try {
+    const parts = toPath(path)
+    let obj = object
+    while (parts.length) {
+      const key = parts.shift()
+      if (!parts.length) {
+        Vue.set(obj, key, value)
+      } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
+        Vue.set(obj, key, typeof key === 'number' ? [] : {})
+      }
+      obj = obj[key]
     }
-    obj = obj[key]
+    return object
+  } catch (err) {
+    throw deepsetError(`vueSet unable to set object (${err.message})`)
   }
 }
 
 export function vuexSet (path, value) {
-  if (!this.$store) throw new Error('[vue-deepset]: could not find vuex store object on instance')
-  this.$store[this.$store.commit ? 'commit' : 'dispatch']('VUEX_DEEP_SET', { path, value })
+  if (!isObjectLike(this.$store)) {
+    throw deepsetError('could not find vuex store object on instance')
+  }
+  const method = this.$store.commit ? 'commit' : 'dispatch'
+  this.$store[method]('VUEX_DEEP_SET', { path, value })
 }
 
 export function VUEX_DEEP_SET (state, { path, value }) {
@@ -235,7 +242,7 @@ export function extendMutation (mutations = {}) {
 export function vueModel (object, options) {
   const opts = Object.assign({}, options)
   if (!isObjectLike(object)) {
-    throw new Error('[vue-deepset]: invalid object specified for vue model')
+    throw deepsetError('invalid object specified for vue model')
   } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
     return buildVueModel(this, object, opts)
   }
@@ -245,9 +252,11 @@ export function vueModel (object, options) {
 export function vuexModel (vuexPath, options) {
   const opts = Object.assign({}, options)
   if (typeof vuexPath !== 'string' || vuexPath === '') {
-    throw new Error('[vue-deepset]: invalid vuex path string')
+    throw deepsetError('invalid vuex path string')
+  } else if (!isObjectLike(this.$store) || !isObjectLike(this.$store.state)) {
+    throw deepsetError('no vuex state found')
   } else if (!has(this.$store.state, vuexPath)) {
-    throw new Error(`[vue-deepset]: Cannot find path "${vuexPath}" in Vuex store`)
+    throw deepsetError(`cannot find path "${vuexPath}" in Vuex store`)
   } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
     return buildVuexModel(this, vuexPath, opts)
   }
@@ -261,8 +270,7 @@ export function deepModel (base, options) {
 }
 
 export function install (VueInstance) {
-  VueInstance.prototype.$vueModel = vueModel
-  VueInstance.prototype.$vuexModel = vuexModel
   VueInstance.prototype.$deepModel = deepModel
   VueInstance.prototype.$vueSet = vueSet
+  VueInstance.prototype.$vuexSet = vuexSet
 }

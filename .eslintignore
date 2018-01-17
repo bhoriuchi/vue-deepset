@@ -1,3 +1,6 @@
 dist
 archive
 test
+index.js
+vue-deepset.js
+vue-deepset.min.js

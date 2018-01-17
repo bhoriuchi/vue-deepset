@@ -38,8 +38,11 @@ var rePropName = RegExp(
 // Or match "" as the space between consecutive dots or empty brackets.
 '(?=(?:\\.|\\[\\])(?:\\.|\\[\\]|$))', 'g');
 
-// modified from lodash
+// modified from lodash - https://github.com/lodash/lodash
 function toPath(string) {
+  if (Array.isArray(string)) {
+    return string;
+  }
   var result = [];
   if (string.charCodeAt(0) === charCodeOfDot) {
     result.push('');
@@ -57,6 +60,14 @@ function toPath(string) {
 }
 
 function noop() {}
+
+function hasOwnProperty(object, property) {
+  return Object.prototype.hasOwnProperty.call(object, property);
+}
+
+function deepsetError(message) {
+  return new Error('[vue-deepset]: ' + message);
+}
 
 function isObjectLike(object) {
   return (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object' && object !== null;
@@ -118,12 +129,11 @@ function getPaths(object) {
         pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
         pushPaths(val, (current + '[' + key + ']').replace(/^\./, ''), paths);
         pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
-      } else if (key.match(invalidKey) !== null) {
-        // must quote
-        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
-      } else {
+      } else if (!key.match(invalidKey)) {
         pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
       }
+      // always add the absolute array notation path
+      pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
     });
   }
   return [].concat(new Set(paths));
@@ -146,14 +156,6 @@ function _get(obj, path, defaultValue) {
   return defaultValue;
 }
 
-function hasOwnProperty(object, property) {
-  return Object.prototype.hasOwnProperty.call(object, property);
-}
-
-function getProp(object, property) {
-  return Object.keys(object).indexOf(property) === -1 ? _get(object, property) : object[property];
-}
-
 function getProxy(vm, base, options) {
   noop(options); // for future potential options
   var isVuex = typeof base === 'string';
@@ -161,7 +163,7 @@ function getProxy(vm, base, options) {
 
   return new Proxy(object, {
     get: function get(target, property) {
-      return getProp(target, property);
+      return _get(target, property);
     },
     set: function set(target, property, value) {
       isVuex ? vuexSet.call(vm, pathJoin(base, property), value) : vueSet(target, property, value);
@@ -184,7 +186,7 @@ function getProxy(vm, base, options) {
     },
     getOwnPropertyDescriptor: function getOwnPropertyDescriptor(target, property) {
       return {
-        value: getProp(target, property),
+        value: _get(target, property),
         writable: false,
         enumerable: true,
         configurable: true
@@ -231,22 +233,30 @@ function buildVuexModel(vm, vuexPath, options) {
 }
 
 function vueSet(object, path, value) {
-  var parts = toPath(path);
-  var obj = object;
-  while (parts.length) {
-    var key = parts.shift();
-    if (!parts.length) {
-      _vue2.default.set(obj, key, value);
-    } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
-      _vue2.default.set(obj, key, typeof key === 'number' ? [] : {});
+  try {
+    var parts = toPath(path);
+    var obj = object;
+    while (parts.length) {
+      var key = parts.shift();
+      if (!parts.length) {
+        _vue2.default.set(obj, key, value);
+      } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
+        _vue2.default.set(obj, key, typeof key === 'number' ? [] : {});
+      }
+      obj = obj[key];
     }
-    obj = obj[key];
+    return object;
+  } catch (err) {
+    throw deepsetError('vueSet unable to set object (' + err.message + ')');
   }
 }
 
 function vuexSet(path, value) {
-  if (!this.$store) throw new Error('[vue-deepset]: could not find vuex store object on instance');
-  this.$store[this.$store.commit ? 'commit' : 'dispatch']('VUEX_DEEP_SET', { path: path, value: value });
+  if (!isObjectLike(this.$store)) {
+    throw deepsetError('could not find vuex store object on instance');
+  }
+  var method = this.$store.commit ? 'commit' : 'dispatch';
+  this.$store[method]('VUEX_DEEP_SET', { path: path, value: value });
 }
 
 function VUEX_DEEP_SET(state, _ref) {
@@ -265,7 +275,7 @@ function extendMutation() {
 function vueModel(object, options) {
   var opts = Object.assign({}, options);
   if (!isObjectLike(object)) {
-    throw new Error('[vue-deepset]: invalid object specified for vue model');
+    throw deepsetError('invalid object specified for vue model');
   } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
     return buildVueModel(this, object, opts);
   }
@@ -275,9 +285,11 @@ function vueModel(object, options) {
 function vuexModel(vuexPath, options) {
   var opts = Object.assign({}, options);
   if (typeof vuexPath !== 'string' || vuexPath === '') {
-    throw new Error('[vue-deepset]: invalid vuex path string');
+    throw deepsetError('invalid vuex path string');
+  } else if (!isObjectLike(this.$store) || !isObjectLike(this.$store.state)) {
+    throw deepsetError('no vuex state found');
   } else if (!has(this.$store.state, vuexPath)) {
-    throw new Error('[vue-deepset]: Cannot find path "' + vuexPath + '" in Vuex store');
+    throw deepsetError('cannot find path "' + vuexPath + '" in Vuex store');
   } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
     return buildVuexModel(this, vuexPath, opts);
   }
@@ -289,10 +301,9 @@ function deepModel(base, options) {
 }
 
 function install(VueInstance) {
-  VueInstance.prototype.$vueModel = vueModel;
-  VueInstance.prototype.$vuexModel = vuexModel;
   VueInstance.prototype.$deepModel = deepModel;
   VueInstance.prototype.$vueSet = vueSet;
+  VueInstance.prototype.$vuexSet = vuexSet;
 }
 
 },{}]},{},[1])(1)
