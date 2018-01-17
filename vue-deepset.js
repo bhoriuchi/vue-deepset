@@ -1,85 +1,135 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.VueDeepSet = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 
-function _interopDefault$1 (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var Vue = _interopDefault$1((window.Vue));
+exports.vueSet = vueSet;
+exports.vuexSet = vuexSet;
+exports.VUEX_DEEP_SET = VUEX_DEEP_SET;
+exports.extendMutation = extendMutation;
+exports.vueModel = vueModel;
+exports.vuexModel = vuexModel;
+exports.deepModel = deepModel;
+exports.install = install;
 
-/**
- * Converts a path string into a path array
- * @param pathString
- * @returns {Array}
- */
-function toPath(pathString) {
-  if (Array.isArray(pathString)) return pathString;
-  if (typeof pathString === 'number') return [pathString];
-  pathString = String(pathString);
+var _vue = (window.Vue);
 
-  // taken from lodash - https://github.com/lodash/lodash
-  var pathRx = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g;
-  var pathArray = [];
+var _vue2 = _interopRequireDefault(_vue);
 
-  pathString.replace(pathRx, function (match, number, quote, string) {
-    pathArray.push(quote ? string : number !== undefined ? Number(number) : match);
-    return pathArray[pathArray.length - 1];
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var invalidKey = /^\d|[^a-zA-Z0-9_]/gm;
+var intKey = /^\d+$/;
+var charCodeOfDot = '.'.charCodeAt(0);
+var reEscapeChar = /\\(\\)?/g;
+var rePropName = RegExp(
+// Match anything that isn't a dot or bracket.
+'[^.[\\]]+' + '|' +
+// Or match property names within brackets.
+'\\[(?:' +
+// Match a non-string expression.
+'([^"\'].*)' + '|' +
+// Or match strings (supports escaping characters).
+'(["\'])((?:(?!\\2)[^\\\\]|\\\\.)*?)\\2' + ')\\]' + '|' +
+// Or match "" as the space between consecutive dots or empty brackets.
+'(?=(?:\\.|\\[\\])(?:\\.|\\[\\]|$))', 'g');
+
+// modified from lodash
+function toPath(string) {
+  var result = [];
+  if (string.charCodeAt(0) === charCodeOfDot) {
+    result.push('');
+  }
+  string.replace(rePropName, function (match, expression, quote, subString) {
+    var key = match;
+    if (quote) {
+      key = subString.replace(reEscapeChar, '$1');
+    } else if (expression) {
+      key = expression.trim();
+    }
+    result.push(key);
   });
-  return pathArray;
+  return result;
 }
 
-/**
- * loops through an object and executes the function
- * @param obj
- * @param fn
- */
-function forEach(obj, fn, throwErrors) {
+function noop() {}
+
+function isObjectLike(object) {
+  return (typeof object === 'undefined' ? 'undefined' : _typeof(object)) === 'object' && object !== null;
+}
+
+function pathJoin(base, path) {
   try {
-    if (Array.isArray(obj)) {
-      var idx = 0;
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
-
-      try {
-        for (var _iterator = obj[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var val = _step.value;
-
-          if (fn(val, idx) === false) break;
-          idx++;
-        }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
-          }
-        } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
-          }
-        }
-      }
-    } else {
-      for (var key in obj) {
-        if (fn(obj[key], key) === false) break;
-      }
-    }
-  } catch (err) {
-    if (throwErrors) throw err;
+    var connector = path.match(/^\[/) ? '' : '.';
+    return '' + (base || '') + (base ? connector : '') + path;
+  } catch (error) {
+    return '';
   }
 }
 
-/**
- * gets a value from a specific path - modified from lodash.js
- * @param obj
- * @param path
- * @param defaultValue
- * @returns {*}
- */
-function get(obj, path, defaultValue) {
+function pushPaths(object, current, paths) {
+  paths.push(current);
+  if (isObjectLike(object)) {
+    getPaths(object, current, paths);
+  }
+}
+
+function forEach(object, iteratee) {
+  var isArray = Array.isArray(object);
+  var keys = isArray ? object : Object.keys(object);
+  keys.forEach(function (value, index) {
+    return isArray ? iteratee(value, index) : iteratee(object[value], value);
+  });
+}
+
+function has(object, path) {
+  var obj = object;
+  var parts = toPath(path);
+  while (parts.length) {
+    var key = parts.shift();
+    if (Object.prototype.hasOwnProperty.call(object, key)) {
+      if (!parts.length) {
+        return true;
+      }
+      obj = obj[key];
+    }
+  }
+  return false;
+}
+
+function getPaths(object) {
+  var current = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+  var paths = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
+
+  if (Array.isArray(object)) {
+    forEach(object, function (val, idx) {
+      pushPaths(val, (current + '.' + idx).replace(/^\./, ''), paths);
+      pushPaths(val, (current + '[' + idx + ']').replace(/^\./, ''), paths);
+      pushPaths(val, (current + '["' + idx + '"]').replace(/^\./, ''), paths);
+    });
+  } else if (isObjectLike(object)) {
+    forEach(object, function (val, key) {
+      if (key.match(intKey) !== null) {
+        // is index
+        pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
+        pushPaths(val, (current + '[' + key + ']').replace(/^\./, ''), paths);
+        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
+      } else if (key.match(invalidKey) !== null) {
+        // must quote
+        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
+      } else {
+        pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
+      }
+    });
+  }
+  return [].concat(new Set(paths));
+}
+
+function _get(obj, path, defaultValue) {
   try {
     var o = obj;
     var fields = Array.isArray(path) ? path : toPath(path);
@@ -96,413 +146,154 @@ function get(obj, path, defaultValue) {
   return defaultValue;
 }
 
-/**
- * checks if a path exists - modified from lodash.js
- * @param object
- * @param path
- * @returns {boolean}
- */
-function hasPath(object, path) {
-  path = toPath(path);
+function hasOwnProperty(object, property) {
+  return Object.prototype.hasOwnProperty.call(object, property);
+}
 
-  var index = -1;
-  var _path = path,
-      length = _path.length;
+function getProp(object, property) {
+  return Object.keys(object).indexOf(property) === -1 ? _get(object, property) : object[property];
+}
 
-  var result = false;
-  var key = void 0;
+function getProxy(vm, base, options) {
+  noop(options); // for future potential options
+  var isVuex = typeof base === 'string';
+  var object = isVuex ? _get(vm.$store.state, base) : base;
 
-  while (++index < length) {
-    key = path[index];
-    if (!(result = object != null && Object.prototype.hasOwnProperty.call(object, key))) {
-      break;
+  return new Proxy(object, {
+    get: function get(target, property) {
+      return getProp(target, property);
+    },
+    set: function set(target, property, value) {
+      isVuex ? vuexSet.call(vm, pathJoin(base, property), value) : vueSet(target, property, value);
+      return true;
+    },
+    deleteProperty: function deleteProperty() {
+      return true;
+    },
+    enumerate: function enumerate(target) {
+      return Object.keys(target);
+    },
+    ownKeys: function ownKeys(target) {
+      return Object.keys(target);
+    },
+    has: function has(target, property) {
+      return true;
+    },
+    defineProperty: function defineProperty(target) {
+      return target;
+    },
+    getOwnPropertyDescriptor: function getOwnPropertyDescriptor(target, property) {
+      return {
+        value: getProp(target, property),
+        writable: false,
+        enumerable: true,
+        configurable: true
+      };
     }
-    object = object[key];
-  }
-
-  return result;
+  });
 }
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-var toConsumableArray = function (arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-    return arr2;
-  } else {
-    return Array.from(arr);
-  }
-};
-
-var INVALID_KEY_RX = /^\d|[^a-zA-Z0-9_]/gm;
-var INT_KEY_RX = /^\d+$/;
-/**
- * returns true if object is non empty object
- * @param obj
- * @returns {boolean|*}
- */
-function isHash(obj) {
-  return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && !Array.isArray(obj) && !(obj instanceof Date) && obj !== null;
-}
-
-/**
- * joins 2 paths
- * @param base
- * @param path
- * @returns {string}
- */
-function pathJoin(base, path) {
-  try {
-    var connector = path.match(/^\[/) ? '' : '.';
-    return '' + (base || '') + (base ? connector : '') + path;
-  } catch (error) {
-    return '';
-  }
-}
-
-/**
- * simple helper to push paths and determine if more
- * paths need to be constructed
- * @param {*} obj
- * @param {*} current
- * @param {*} paths
- */
-function pushPaths(obj, current, paths) {
-  paths.push(current);
-  if (isHash(obj) || Array.isArray(obj)) {
-    getPaths(obj, current, paths);
-  }
-}
-
-/**
- * generates an array of paths to use when creating an abstracted object
- * @param obj
- * @param current
- * @param paths
- * @returns {Array|*}
- */
-function getPaths(obj) {
-  var current = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-  var paths = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
-
-  if (isHash(obj)) {
-    forEach(obj, function (val, key) {
-      if (key.match(INT_KEY_RX) !== null) {
-        // is index
-        pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
-        pushPaths(val, (current + '[' + key + ']').replace(/^\./, ''), paths);
-        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
-      } else if (key.match(INVALID_KEY_RX) !== null) {
-        // must quote
-        pushPaths(val, (current + '["' + key + '"]').replace(/^\./, ''), paths);
-      } else {
-        pushPaths(val, (current + '.' + key).replace(/^\./, ''), paths);
+function buildVueModel(vm, object, options) {
+  var model = {};
+  forEach(getPaths(object), function (path) {
+    Object.defineProperty(model, path, {
+      configurable: true,
+      enumerable: true,
+      get: function get() {
+        return _get(object, path);
+      },
+      set: function set(value) {
+        return vueSet(object, path, value);
       }
     });
-  } else if (Array.isArray(obj)) {
-    forEach(obj, function (val, idx) {
-      pushPaths(val, (current + '.' + idx).replace(/^\./, ''), paths);
-      pushPaths(val, (current + '[' + idx + ']').replace(/^\./, ''), paths);
-      pushPaths(val, (current + '["' + idx + '"]').replace(/^\./, ''), paths);
-    });
-  }
-  return [].concat(toConsumableArray(new Set(paths)));
+  });
+  return model;
 }
 
-/*
- * @author Branden Horiuchi <bhoriuchi@gmail.com>
- * @description Deep set Vue.js objects
- */
-/**
- * deep sets a Vue.js object creating reactive properties if they do not exist
- * @param object
- * @param path
- * @param value
- */
+function buildVuexModel(vm, vuexPath, options) {
+  var model = Object.create(null);
+  var object = _get(vm.$store.state, vuexPath);
+  var paths = getPaths(object);
+  forEach(paths, function (path) {
+    var propPath = pathJoin(vuexPath, path);
+    Object.defineProperty(model, path, {
+      configurable: true,
+      enumerable: true,
+      get: function get() {
+        return _get(vm.$store.state, propPath);
+      },
+      set: function set(value) {
+        return vuexSet.call(vm, propPath, value);
+      }
+    });
+  });
+  return model;
+}
+
 function vueSet(object, path, value) {
   var parts = toPath(path);
   var obj = object;
-
   while (parts.length) {
     var key = parts.shift();
     if (!parts.length) {
-      Vue.set(obj, key, value);
-    } else if (!hasPath(obj, key) || obj[key] === null) {
-      Vue.set(obj, key, key === 'number' ? [] : {});
+      _vue2.default.set(obj, key, value);
+    } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
+      _vue2.default.set(obj, key, typeof key === 'number' ? [] : {});
     }
     obj = obj[key];
   }
 }
 
-/**
- * deep sets a vuex object creating reactive properties if they do not exist
- * @param path
- * @param value
- */
 function vuexSet(path, value) {
   if (!this.$store) throw new Error('[vue-deepset]: could not find vuex store object on instance');
   this.$store[this.$store.commit ? 'commit' : 'dispatch']('VUEX_DEEP_SET', { path: path, value: value });
 }
 
-/**
- * vuex mutation to set an objects value at a specific path
- * @param state
- * @param args
- */
-function VUEX_DEEP_SET(state, args) {
-  vueSet(state, args.path, args.value);
+function VUEX_DEEP_SET(state, _ref) {
+  var path = _ref.path,
+      value = _ref.value;
+
+  vueSet(state, path, value);
 }
 
-/**
- * helper function to extend a mutation object
- * @param mutations
- * @returns {*}
- */
 function extendMutation() {
   var mutations = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
   return Object.assign(mutations, { VUEX_DEEP_SET: VUEX_DEEP_SET });
 }
 
-/**
- * builds a new model object based on the values
- * @param vuexPath
- * @param options
- * @returns {Object}
- */
-function buildVuexModel(vuexPath, options) {
-  var _this = this;
-
-  var model = {};
-
-  var obj = get(this.$store.state, vuexPath);
-  var paths = getPaths(obj);
-  forEach(paths, function (path) {
-    var propPath = pathJoin(vuexPath, path);
-    Object.defineProperty(model, path, {
-      configurable: true,
-      enumerable: true,
-      get: function get$$1() {
-        return get(_this.$store.state, propPath);
-      },
-      set: function set$$1(value) {
-        vuexSet.call(_this, propPath, value);
-      }
-    });
-  });
-
-  return model;
-}
-
-/**
- * returns an object that can deep set fields in a vuex store
- * @param vuexPath
- * @returns {Object}
- */
-function vuexModel(vuexPath, options) {
-  var _this2 = this;
-
+function vueModel(object, options) {
   var opts = Object.assign({}, options);
-  if (typeof vuexPath !== 'string' || !vuexPath) {
-    throw new Error('[vue-deepset]: invalid vuex path string');
-  } else if (!hasPath(this.$store.state, vuexPath)) {
-    throw new Error('[vue-deepset]: Cannot find path "' + vuexPath + '" in Vuex store');
-  } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
-    return buildVuexModel.call(this, vuexPath, opts);
-  }
-
-  var obj = get(this.$store.state, vuexPath);
-  var tgt = {
-    model: buildVuexModel.call(this, vuexPath, opts)
-  };
-
-  return new Proxy(obj, {
-    get: function get$$1(target, property) {
-      if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
-      if (property === 'toJSON') return target.toJSON;
-      if (property === '_isVue') return false; // _isVue is always false
-      // add any missing paths to the source object and add the property
-      if (opts.dynamicUpdates !== false && !hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
-        vuexSet.call(_this2, pathJoin(vuexPath, property), undefined);
-        tgt.model = buildVuexModel.call(_this2, vuexPath, opts);
-      }
-      return tgt.model[property];
-    },
-    set: function set$$1(target, property, value) {
-      if (tgt.model[property] === value) return true;
-      tgt.model[property] = value;
-      return true;
-    },
-    has: function has(target, property) {
-      if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
-      if (property === 'toJSON') return target.toJSON;
-      if (property === '_isVue') return true;
-      if (opts.dynamicUpdates !== false && !hasPath(obj, property) && (typeof property === 'string' || typeof property === 'number')) {
-        vuexSet.call(_this2, pathJoin(vuexPath, property), undefined);
-        tgt.model = buildVuexModel.call(_this2, vuexPath, opts);
-      }
-      return true;
-    }
-  });
-}
-
-/**
- * builds a new model object based on the values
- * @param obj
- * @param options
- * @returns {Object}
- */
-function buildVueModel(obj, options) {
-  var _this3 = this;
-
-  var model = {};
-  forEach(getPaths(obj), function (path) {
-    Object.defineProperty(model, path, {
-      configurable: true,
-      enumerable: true,
-      get: function get$$1() {
-        return get(obj, path);
-      },
-      set: function set$$1(value) {
-        vueSet.call(_this3, obj, path, value);
-      }
-    });
-  });
-  return model;
-}
-
-/**
- * returns an object that can deep set fields in a vue.js object
- * @param obj
- * @returns {Object}
- */
-function vueModel(obj, options) {
-  var _this4 = this;
-
-  var opts = Object.assign({}, options);
-  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object' || !obj) {
+  if (!isObjectLike(object)) {
     throw new Error('[vue-deepset]: invalid object specified for vue model');
   } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
-    return buildVueModel.call(this, obj, opts);
+    return buildVueModel(this, object, opts);
   }
-  var tgt = { model: buildVueModel.call(this, obj, opts) };
-  return new Proxy(obj, {
-    get: function get$$1(target, property) {
-      if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
-      if (property === 'toJSON') return target.toJSON;
-      if (property === '_isVue') return false; // _isVue is always false
-
-      if (opts.dynamicUpdates !== false && !hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
-        vueSet.call(_this4, obj, property, undefined);
-        tgt.model = buildVueModel.call(_this4, obj, opts);
-      }
-      return tgt.model[property];
-    },
-    set: function set$$1(target, property, value) {
-      if (tgt.model[property] === value) return true;
-      tgt.model[property] = value;
-      return true;
-    },
-    has: function has(target, property) {
-      if (property === '_isVue') return true;
-      if ((typeof property === 'undefined' ? 'undefined' : _typeof(property)) === 'symbol') return target[property];
-      if (property === 'toJSON') return target.toJSON;
-
-      if (opts.dynamicUpdates !== false && !hasPath(tgt.model, property) && (typeof property === 'string' || typeof property === 'number')) {
-        vueSet.call(_this4, obj, property, undefined);
-        tgt.model = buildVueModel.call(_this4, obj, opts);
-      }
-      return true;
-    }
-  });
+  return getProxy(this, object, opts);
 }
 
-/**
- * creates a vuex model if the arg is a string, vue model otherwise
- * @param arg
- * @returns {Object}
- */
-function deepModel(arg, options) {
-  return typeof arg === 'string' ? vuexModel.call(this, arg, options) : vueModel.call(this, arg, options);
+function vuexModel(vuexPath, options) {
+  var opts = Object.assign({}, options);
+  if (typeof vuexPath !== 'string' || vuexPath === '') {
+    throw new Error('[vue-deepset]: invalid vuex path string');
+  } else if (!has(this.$store.state, vuexPath)) {
+    throw new Error('[vue-deepset]: Cannot find path "' + vuexPath + '" in Vuex store');
+  } else if (opts.useProxy === false || typeof Proxy === 'undefined') {
+    return buildVuexModel(this, vuexPath, opts);
+  }
+  return getProxy(this, vuexPath, opts);
 }
 
-/**
- * plugin
- * @param Vue
- */
-function install(Vue$$1) {
-  Vue$$1.prototype.$deepModel = deepModel;
-  Vue$$1.prototype.$vueSet = vueSet;
-  Vue$$1.prototype.$vuexSet = vuexSet;
+function deepModel(base, options) {
+  return typeof base === 'string' ? vuexModel.call(this, base, options) : vueModel.call(this, base, options);
 }
 
-exports.vueSet = vueSet;
-exports.vuexSet = vuexSet;
-exports.VUEX_DEEP_SET = VUEX_DEEP_SET;
-exports.extendMutation = extendMutation;
-exports.vuexModel = vuexModel;
-exports.vueModel = vueModel;
-exports.deepModel = deepModel;
-exports.install = install;
+function install(VueInstance) {
+  VueInstance.prototype.$vueModel = vueModel;
+  VueInstance.prototype.$vuexModel = vuexModel;
+  VueInstance.prototype.$deepModel = deepModel;
+  VueInstance.prototype.$vueSet = vueSet;
+}
 
 },{}]},{},[1])(1)
 });

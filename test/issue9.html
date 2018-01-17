@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproduce issue 4</title>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.4.2/vue.js"></script>
+  <script src="../vue-deepset.js"></script>
+</head>
+<body>
+<div id="app">
+  <input type="text" v-model="model[path1]">
+  <br>
+  <input type="text" v-model="model[path2]">
+  <pre v-text="data"></pre>
+</div>
+
+<script>
+  Vue.use(VueDeepSet);
+  var app = new Vue({
+    el: '#app',
+    data() {
+      return {
+        path1: '["test.a"].a.c',
+        path2: '["propertygroup.a"]',
+        data: {
+          'test.a': {
+            a: {
+              b: 1
+            }
+          },
+          'propertygroup.a': 'value-a',
+          'propertygroup.b': 'balue-b'
+        }
+      }
+    },
+    computed: {
+      model() {
+        console.log('model change')
+        return this.$deepModel(this.data, { useProxy: true });
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

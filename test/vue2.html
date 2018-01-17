@@ -97,7 +97,7 @@
     store,
     computed: {
       vueModel () {
-        return this.$deepModel(this.obj)
+        return this.$deepModel(this.obj, { useProxy: true })
       },
       vuexModel () {
         return this.$deepModel('formData', { useProxy: true })

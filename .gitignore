@@ -7,3 +7,4 @@ test/e2e/reports
 .idea/
 example/build.js
 package-lock.json
+dist/

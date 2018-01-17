@@ -144,7 +144,6 @@ Creates an abstracted model with a set of flat properties that are generated fro
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
-* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ##### vuexModel ( path:String, [options:Object] )
 
@@ -152,7 +151,6 @@ The equivalent of `vueModel` for `vuex`. Path should point to the base object
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
-* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ##### deepModel ( obj:Object, [options:Object] )
 
@@ -160,7 +158,6 @@ Equivalent to `vueModel`
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
-* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ##### deepModel ( path:String, [options:Object] )
 
@@ -168,7 +165,6 @@ Equivalent to `vuexModel`
 
 **options**
 * `useProxy=true` {`Boolean`} - disable use of Proxy when false
-* `dynamicUpdates=true` {`Boolean`} - disable dynamic property update check (can improve performance on deeply nested objects)
 
 ### Non-Plugin usage
 
