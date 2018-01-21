@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproduce issue 11</title>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.0.1/vuex.js"></script>
+  <script src="../vue-deepset.js"></script>
+</head>
+<body>
+<div id="app">
+	<div>
+    <input type="number" v-model.number="adjustmentFormModel.quantity" />
+    <pre v-text="$store.state"></pre>
+  </div>
+</div>
+
+<script>
+  Vue.use(VueDeepSet)
+  var store = new Vuex.Store({
+    state: {
+      user: {
+        id: 1,
+        name: 'rey'
+      }
+    },
+    mutations: VueDeepSet.extendMutation()
+  })
+  var app = new Vue({
+    el: '#app',
+    store,
+    created () {
+      this.$store.registerModule(['WarehouseModule'], {
+        namespaced: true,
+        state: {
+          adjustmentForm: {
+            id: 1,
+            quantity: 10
+          }
+        }
+      });
+    },
+    computed: {
+      adjustmentFormModel() {
+        return this.$deepModel('WarehouseModule.adjustmentForm')
+      }
+    }
+  })
+</script>
+
+</body>
+</html>

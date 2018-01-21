@@ -136,9 +136,33 @@ var store = new Vuex.Store({
     }
   },
   mutations: VueDeepSet.extendMutation({
-    SOME_OTHER_MUTATION,
-    ...
+    // other mutations
   })
+})
+
+var app = new Vue({
+  el: '#app',
+  store,
+  computed: {
+    formData () {
+      return this.$deepModel('formData')
+    }
+  }
+})
+```
+or
+
+```js
+var store = new Vuex.Store({
+  state: {
+    formData: {
+      message: 'Hello Vuex!'
+    }
+  },
+  mutations: {
+    VUEX_DEEP_SET: VueDeepSet.VUEX_DEEP_SET,
+    // other mutations
+  }
 })
 
 var app = new Vue({

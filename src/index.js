@@ -84,12 +84,12 @@ function has (object, path) {
   const parts = toPath(path)
   while (parts.length) {
     const key = parts.shift()
-    if (Object.prototype.hasOwnProperty.call(object, key)) {
-      if (!parts.length) {
-        return true
-      }
-      obj = obj[key]
+    if (!hasOwnProperty(obj, key)) {
+      return false
+    } else if (!parts.length) {
+      return true
     }
+    obj = obj[key]
   }
   return false
 }
