@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reproduce issue 12</title>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.0.1/vuex.js"></script>
+  <script src="../vue-deepset.js"></script>
+</head>
+<body>
+<div id="app">
+	<div>
+		<div>
+				<h1>Books info</h1>
+				<template v-for="(book, bookIndex) in libraryModel['books']">
+					<div>
+						<h3>{{book.title}}</h3>
+						<template v-for="(fan, fanIndex) in book.fans">
+							Name:<input v-model.trim="libraryModel[`books[${bookIndex}].fans[${fanIndex}].name`]" />
+							Comments:<input type="number" v-model.number="libraryModel[`books[${bookIndex}].fans[${fanIndex}].comments`]" />
+							<br/>
+						</template>
+					</div>
+				</template>
+		</div>
+		<pre v-text="libraryModel"></pre>
+	</div>
+</div>
+
+<script>
+  Vue.use(VueDeepSet)
+  var store = new Vuex.Store({
+    state: {
+      user: {
+        id: 1,
+        name: 'rey'
+      }
+    },
+    mutations: VueDeepSet.extendMutation()
+  })
+  var app = new Vue({
+    el: '#app',
+    store,
+    created () {
+      this.$store.registerModule(['BooksModule'], {
+        namespaced: true,
+        state: {
+          library: {
+            id: 1,
+            address: 'Some place in my mind',
+            books: [
+              {
+                title: 'Vuejs for fun',
+                fans: [
+                  {
+                    id: 1,
+                    name: 'FooBarnatic',
+                    comments: 2
+                  },
+                  {
+                    id: 2,
+                    name: 'BazManiac',
+                    comments: 10
+                  }
+                ]
+              },
+              {
+                title: 'vue-deepset the nice way',
+                fans: [
+                  {
+                    id: 1,
+                    name: 'FooBarnatic',
+                    comments: 35
+                  },
+                  {
+                    id: 2,
+                    name: 'BazManiac',
+                    comments: 50
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      });
+    },
+    computed: {
+      libraryModel() {
+        return this.$deepModel('BooksModule.library');
+      }
+    }
+  })
+</script>
+
+</body>
+</html>

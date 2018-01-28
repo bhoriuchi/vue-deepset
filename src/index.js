@@ -2,41 +2,31 @@ import Vue from 'vue'
 
 const invalidKey = /^\d|[^a-zA-Z0-9_]/gm
 const intKey = /^\d+$/
-const charCodeOfDot = '.'.charCodeAt(0)
-const reEscapeChar = /\\(\\)?/g
-const rePropName = RegExp(
-  // Match anything that isn't a dot or bracket.
-  '[^.[\\]]+' + '|' +
-  // Or match property names within brackets.
-  '\\[(?:' +
-  // Match a non-string expression.
-  '([^"\'].*)' + '|' +
-  // Or match strings (supports escaping characters).
-  '(["\'])((?:(?!\\2)[^\\\\]|\\\\.)*?)\\2' +
-  ')\\]' + '|' +
-  // Or match "" as the space between consecutive dots or empty brackets.
-  '(?=(?:\\.|\\[\\])(?:\\.|\\[\\]|$))'
-  , 'g')
 
-// modified from lodash - https://github.com/lodash/lodash
-function toPath (string) {
-  if (Array.isArray(string)) {
-    return string
-  }
-  const result = []
-  if (string.charCodeAt(0) === charCodeOfDot) {
-    result.push('')
-  }
-  string.replace(rePropName, (match, expression, quote, subString) => {
-    let key = match
-    if (quote) {
-      key = subString.replace(reEscapeChar, '$1')
-    } else if (expression) {
-      key = expression.trim()
-    }
-    result.push(key)
+function isNumberLike(value) {
+  return String(value).match(/^\d+$/);
+}
+
+function toPath (pathString) {
+  if (Array.isArray(pathString)) return pathString
+  if (typeof pathString === 'number') return [ pathString ]
+  pathString = String(pathString)
+
+  // taken from lodash - https://github.com/lodash/lodash
+  let pathRx = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g
+  let pathArray = []
+
+  pathString.replace(pathRx, (match, number, quote, string) => {
+    pathArray.push(
+      quote
+        ? string
+        : number !== undefined
+          ? Number(number)
+          : match
+    )
+    return pathArray[pathArray.length - 1]
   })
-  return result
+  return pathArray
 }
 
 function noop () {}
@@ -120,7 +110,7 @@ function getPaths (object, current = '', paths = []) {
 function get (obj, path, defaultValue) {
   try {
     let o = obj
-    const fields = Array.isArray(path) ? path : toPath(path)
+    const fields = toPath(path)
     while (fields.length) {
       const prop = fields.shift()
       o = o[prop]
@@ -204,23 +194,20 @@ function buildVuexModel (vm, vuexPath, options) {
   return model
 }
 
-export function vueSet (object, path, value) {
-  try {
-    const parts = toPath(path)
-    let obj = object
-    while (parts.length) {
-      const key = parts.shift()
-      if (!parts.length) {
-        Vue.set(obj, key, value)
-      } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
-        Vue.set(obj, key, typeof key === 'number' ? [] : {})
-      }
-      obj = obj[key]
-    }
-    return object
-  } catch (err) {
-    throw deepsetError(`vueSet unable to set object (${err.message})`)
+export function vueSet (obj, path, value) {
+  let fields = Array.isArray(path)
+    ? path
+    : toPath(path)
+  let prop = fields.shift()
+
+  if (!fields.length) return Vue.set(obj, prop, value)
+  if (!hasOwnProperty(obj, prop) || obj[prop] === null) {
+    const objVal = fields.length >= 1 && isNumberLike(fields[0]) 
+      ? []
+      : {}
+    Vue.set(obj, prop, objVal)
   }
+  vueSet(obj[prop], fields, value)
 }
 
 export function vuexSet (path, value) {

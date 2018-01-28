@@ -24,39 +24,25 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var invalidKey = /^\d|[^a-zA-Z0-9_]/gm;
 var intKey = /^\d+$/;
-var charCodeOfDot = '.'.charCodeAt(0);
-var reEscapeChar = /\\(\\)?/g;
-var rePropName = RegExp(
-// Match anything that isn't a dot or bracket.
-'[^.[\\]]+' + '|' +
-// Or match property names within brackets.
-'\\[(?:' +
-// Match a non-string expression.
-'([^"\'].*)' + '|' +
-// Or match strings (supports escaping characters).
-'(["\'])((?:(?!\\2)[^\\\\]|\\\\.)*?)\\2' + ')\\]' + '|' +
-// Or match "" as the space between consecutive dots or empty brackets.
-'(?=(?:\\.|\\[\\])(?:\\.|\\[\\]|$))', 'g');
 
-// modified from lodash - https://github.com/lodash/lodash
-function toPath(string) {
-  if (Array.isArray(string)) {
-    return string;
-  }
-  var result = [];
-  if (string.charCodeAt(0) === charCodeOfDot) {
-    result.push('');
-  }
-  string.replace(rePropName, function (match, expression, quote, subString) {
-    var key = match;
-    if (quote) {
-      key = subString.replace(reEscapeChar, '$1');
-    } else if (expression) {
-      key = expression.trim();
-    }
-    result.push(key);
+function isNumberLike(value) {
+  return String(value).match(/^\d+$/);
+}
+
+function toPath(pathString) {
+  if (Array.isArray(pathString)) return pathString;
+  if (typeof pathString === 'number') return [pathString];
+  pathString = String(pathString);
+
+  // taken from lodash - https://github.com/lodash/lodash
+  var pathRx = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\\]|\\.)*?)\2)\]|(?=(\.|\[\])(?:\4|$))/g;
+  var pathArray = [];
+
+  pathString.replace(pathRx, function (match, number, quote, string) {
+    pathArray.push(quote ? string : number !== undefined ? Number(number) : match);
+    return pathArray[pathArray.length - 1];
   });
-  return result;
+  return pathArray;
 }
 
 function noop() {}
@@ -142,7 +128,7 @@ function getPaths(object) {
 function _get(obj, path, defaultValue) {
   try {
     var o = obj;
-    var fields = Array.isArray(path) ? path : toPath(path);
+    var fields = toPath(path);
     while (fields.length) {
       var prop = fields.shift();
       o = o[prop];
@@ -232,23 +218,16 @@ function buildVuexModel(vm, vuexPath, options) {
   return model;
 }
 
-function vueSet(object, path, value) {
-  try {
-    var parts = toPath(path);
-    var obj = object;
-    while (parts.length) {
-      var key = parts.shift();
-      if (!parts.length) {
-        _vue2.default.set(obj, key, value);
-      } else if (!hasOwnProperty(obj, key) || obj[key] === null) {
-        _vue2.default.set(obj, key, typeof key === 'number' ? [] : {});
-      }
-      obj = obj[key];
-    }
-    return object;
-  } catch (err) {
-    throw deepsetError('vueSet unable to set object (' + err.message + ')');
+function vueSet(obj, path, value) {
+  var fields = Array.isArray(path) ? path : toPath(path);
+  var prop = fields.shift();
+
+  if (!fields.length) return _vue2.default.set(obj, prop, value);
+  if (!hasOwnProperty(obj, prop) || obj[prop] === null) {
+    var objVal = fields.length >= 1 && isNumberLike(fields[0]) ? [] : {};
+    _vue2.default.set(obj, prop, objVal);
   }
+  vueSet(obj[prop], fields, value);
 }
 
 function vuexSet(path, value) {
